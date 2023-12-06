@@ -1,0 +1,42 @@
+#!/usr/bin/python3
+import time
+import os
+import sys
+import subprocess
+from datetime import datetime
+# uhhh
+now = time.time();
+
+if ( len(sys.argv[1:] ) > 0 ):
+	args = sys.argv[0:];
+	argument = ' '.join(str(a) for a in args[1:]);
+	print(argument.strip());
+	# can we parse this into a reasonable date?
+	dt = datetime.strptime(argument.strip(), '%B %d %Y %H:%M');
+	try:
+		epoch = dt.timestamp();
+	except ValueError:
+		print("Error: can't convert the argument", argument, "to a timestamp. Aborting!");
+		exit();
+	print("Got an argument => converted to ", epoch);	
+	now = epoch;
+
+output = """title:None
+tags:
+date:""" + str(now) + """
+###
+Get wise"""
+	
+fn = str(now) + ".txt";
+
+if (os.path.exists(fn)):
+        print("I'm absolutely astonished to report that",fn,"already exists.  Try again in 1ms.");
+        exit();
+
+print(output, file=open(str(now) + ".txt", 'w'));
+image_dir = "../img/" + str(now);
+print("Created " + str(now) + ".txt.");
+
+subprocess.run(["mkdir", image_dir]);
+subprocess.run(["open", image_dir]);
+subprocess.run(["vim", fn]);
