@@ -15,21 +15,21 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	if (!pages || start_page < 0)
 		return NULL;
 
-	// FIXME: index page size is specified in the site configuration yml, but we're just using 10 for now
-	// site->index_size
-	int skipahead = start_page * 10;
+	int skipahead = start_page * site->index_size;
 	int counter = 0;
 
 	// :-D My index page will never exceed 128KB! :-D lol FIXME someday
 	wchar_t *index_output = malloc(131072 * sizeof(wchar_t));
 
 	if (!index_output) {
-		wprintf(L"Error allocating memory for buildilng index page (start_page %d)!", start_page);
+		wprintf(L"Error allocating memory for building index page (start_page %d)!", start_page);
 		perror("malloc(): ");
 		return NULL;
 	}
 
 	wcscpy(index_output, site->header);
+
+	wprintf(L"%ls", index_output);
 
 	for (pp_page *current = pages; current != NULL; current = current->next) {
 		if (counter <= skipahead && skipahead != 0) { 
@@ -39,15 +39,23 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		// At this point, we're where we need to be in the list Render an index with site->index_size items 
 		// on it, or as many as we have, whichever is greater.  
 		
-		wprintf(L"I think I'll build an index :-D I'm on %ls.\n", current->title);
 		// build the output here, decouple the multi-index logic from the index builder, so 
 		// we just call this while iterating over the list, counter % 10 with the right start_page, etc
 //		wprintf(L"%ls\n", current->title);
 		wcscat(index_output, L"<div class=\"post_head\">\n<div class=\"post_icon\">\n");
 		wcscat(index_output, L"<img src=\"/img/icons/582093fd796544ab81fb9d491eae69a3.jpg\" class=\"icon\" alt=\"[AI-generated icon]\">\n");
-		wcscat(index_output, L"</div><div class=\"post_title\"><h3>");
+		// TODO: respect the root URL of the site here and elsewhere
+		wcscat(index_output, L"</div><div class=\"post_title\"><h3><a href=\"/c/");
+
+		wchar_t *link_filename = string_from_int(current->date_stamp);
+		wcscat(index_output, link_filename);
+		free(link_filename);
+
+		wcscat(index_output, L".html\">");
+
+		wcscat(index_output, current->title);
 		// title
-		wcscat(index_output, L"</h3><i>Posted on ");
+		wcscat(index_output, L"</a></h3><i>Posted on ");
 
 		wchar_t *formatted_date = legible_date(current->date_stamp);
 		wcscat(index_output, formatted_date);
@@ -58,10 +66,23 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		wcscat(index_output, explode_tags(current->tags));	
 		wcscat(index_output, L"</div></div>\n<div>");
 		wcscat(index_output, current->content);
-		wcscat(index_output, L"</div>\n");
-	}
+		wcscat(index_output, L"</div><hr>\n");
 	
+		if (current->next == NULL)
+			wcscat(index_output, L"<div class=\"foot\">These are the oldest things</div>\n");
+	}
+
+	wcscat(index_output, L"</div>\n");	
 	wcscat(index_output, site->footer);
+
+        // the header includes some placeholders that need to be removed -- they're mostly for single posts
+        index_output = replace_substring(index_output, L"{BACK}", L"");
+        index_output = replace_substring(index_output, L"{FORWARD}", L"");
+        index_output = replace_substring(index_output, L"{TITLE}", L"");
+        index_output = replace_substring(index_output, L"{TAGS}", L"");
+        index_output = replace_substring(index_output, L"{DATE}", L"");
+	index_output = replace_substring(index_output, L"{PAGETITLE}", site->site_name);
+
 
 	return index_output;
 }
@@ -99,7 +120,10 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	page_output = replace_substring(page_output, L"{FORWARD}", (page->next ? page->next->title : L"")); 
 	page_output = replace_substring(page_output, L"{TITLE}", page->title);
 	page_output = replace_substring(page_output, L"{TAGS}", explode_tags(page->tags));
-	page_output = replace_substring(page_output, L"{DATE}", L"a date :)");
+
+	wchar_t *formatted_date = legible_date(page->date_stamp);
+	page_output = replace_substring(page_output, L"{DATE}", formatted_date);
+	free(formatted_date);
 
 	return page_output;
 }

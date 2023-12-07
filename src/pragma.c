@@ -49,13 +49,13 @@ int main(int argc, char *argv[]) {
 
 	// TODO: change the logic so that we assume
 	if (source_specified && !destination_specified) {
-		printf("=> Error: must specify output directory with -o\n");
+	//	printf("=> Error: must specify output directory with -o\n");
+	//	exit(EXIT_SUCCESS);
+	} else if (!source_specified) {
+		printf("=> Error: must specify site directory with -s\n");
 		exit(EXIT_SUCCESS);
-	} else if (destination_specified && !source_specified) {
-		printf("=> Error: must specify source directory with -s\n");
-		exit(EXIT_SUCCESS);
-	} else if (!source_specified && !destination_specified && !create_site_specified) {
-		printf("=> Error: must specify either source and output directories (-s, -o) or create new site (-c)\n");
+	} else if (!source_specified && !create_site_specified) {
+		printf("=> Error: must either specify source directory (-s) or create new site (-c)\n");
 		exit(EXIT_SUCCESS);
 	}
 
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 		// file to allow for various staging possibilities/temporary setups.  So they need to be
 		// specified here or in whatever script calls pragma builder.
 		if (strcmp(argv[i], "-s") == 0) {
-					if (i + 1 < argc) {
+			if (i + 1 < argc) {
 				// Does the source directory exist?  Is it readable?
 				if (!check_dir(argv[i+1], S_IRUSR)) {
 					printf("=> Error: source directory (%s) does not exist or is not readable.\n", argv[i+1]);
@@ -139,6 +139,20 @@ int main(int argc, char *argv[]) {
 
 		}
 
+        if (source_specified && !destination_specified) {
+		pragma_output_directory = pragma_source_directory;
+		printf("=> Using default output directory %s\n", pragma_output_directory);
+		posts_output_directory = malloc(strlen(pragma_output_directory) + strlen(SITE_POSTS) + 64); //save space forfilename FIXME
+		if (posts_output_directory == NULL ) {
+			printf("! Error: can't allocate memory for string representing the output path...\n");
+			exit(EXIT_FAILURE);
+		}
+		// Figure out the posts directory, given the site base output dir
+		strcpy(posts_output_directory, pragma_output_directory);
+		strcat(posts_output_directory, pragma_output_directory[strlen(pragma_output_directory)-1] != '/' ? "/" : "");
+		strcat(posts_output_directory, SITE_POSTS);
+	}
+
 	site_info* config = load_site_yaml(pragma_source_directory);
 	if (config == NULL) {
 		printf("! Error: Can't proceed without site configuration! Aborting.\n");
@@ -174,10 +188,11 @@ int main(int argc, char *argv[]) {
 	for (pp_page *current = page_list; current != NULL; current = current->next) {
 		destination_file = malloc(256);		// i.e., find a place for the output
 		strcpy(destination_file, posts_output_directory);
-		strcat(destination_file, char_convert(current->date));
-
+		wchar_t *d = string_from_int(current->date_stamp);
+		char *ds = char_convert(d);
+		strcat(destination_file, ds);
+		free(ds); free(d);
 		strip_terminal_newline(NULL, destination_file);
-
 		strcat(destination_file, ".html");
 
 		wprintf(L"Title: %ls\n", current->title);

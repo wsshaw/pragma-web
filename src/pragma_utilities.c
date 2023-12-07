@@ -342,12 +342,6 @@ void strip_terminal_newline(wchar_t *s, char *t) {
 		marker = wcslen(s) - 1;
 		if (!wcscmp(s + marker, L"\n"))
 			s[marker] = L'\0';
-		// Find last occurrence of '\n'...
-	//	wchar_t *newline = wcsrchr(s, L'\n');
-		// ...and if there is one, replace it with the null terminator
-	//	if (newline != NULL) {
-	//		*newline = L'\0';
-	//	}
 	} 
 
 	if (t) {
@@ -368,4 +362,18 @@ wchar_t* legible_date(time_t when) {
 	t = *localtime(&when);
 	wcsftime(output, 64, L"%Y-%m-%d %H:%M:%S", &t);
 	return output;
+}
+
+wchar_t* string_from_int(long int n) {
+	int c = 0, x = n;
+
+	while (x != 0) { 
+		x = x/10; 
+		c++;
+	}
+
+	wchar_t* str = malloc((c + 1) * sizeof(wchar_t)); 
+	swprintf(str, c + 1, L"%ld", n); 
+
+	return str;
 }

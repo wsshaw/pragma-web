@@ -22,9 +22,9 @@
 * to generate the files from this source rather than template files.  (The pragma executable should
 * be able to live anywhere with no supporting files)
 */
-#define DEFAULT_YAML	L"---\nsite_name:Web disaster\njs:no\nbuild_tags:yes\nbuild_scroll:yes\ncss:p.css\nheader:_header.html\nfooter:_footer.html\nindex_size:10\nbase_url:/\ntagline:Comparison is always true due to limited range of data type.\n"
+#define DEFAULT_YAML	L"---\nsite_name:Web disaster\njs:no\nbuild_tags:yes\nbuild_scroll:yes\ncss:p.css\nheader:_header.html\nfooter:_footer.html\nindex_size:10\nicons_dir:img/icons\nbase_url:/\ntagline:Comparison is always true due to limited range of data type.\n"
 #define DEFAULT_YAML_FILENAME "pragma_config.yml"
-#define DEFAULT_CSS	L"body {\n  margin-left:10em;\n  max-width:50%%;\n}\n\nh2 {\n margin-bottom:2px;\n}\n\ndiv.post_title h3 {\n  margin-bottom:2px;\n  margin-top:0px;\n}\n\n.icon {\n  float:left;\n  width:64px;\n  height:64px;\n  padding-right:10px;\n}\n\nimg.post {\n  display: block;\n  margin-left: auto;\n  margin-right: auto;\n  max-width: 75%%;\n clear:both;\n}\n\ndiv.post_head {\n  display:inline-block;\n  width:100%%;\n  clear:both;\n}\n\ndiv.foot {\nmargin: auto;\nwidth: 15%%;\npadding-top: 1em;\nfont-size: larger;\n}\n\ndiv.post_title {\n vertical-align:top;\n float:left;\n display:inline-block;\n  overflow-wrap: break-word;\n  hyphens: auto;\n width: -webkit-calc(100%% - 80px);\n  width:    -moz-calc(100%% - 80px);\n  width:         calc(100%% - 80px);\n}\n\ndiv.post_image_wrapper {\n  margin-left:auto;\n  margin-right:auto;\n  display:block;\n  clear:both;\n text-align:center;\n}\ndiv.post_body {\n  float:left;\n}\n\n@media only screen and (max-width: 600px) {\n  body{\n  margin-left: 1em;\n  margin-right: 1em;\n  max-width: 100%%;\n  }\n  img.post {\n   display:block;\n        margin-left:auto;\n        margin-right:auto;\n        max-width:100%%;\n        clear:both;\n  }\n}\nblockquote {\n  border:1px solid gray;\n  background-color:#eeeeee;\n  margin-left:5em;\n  margin-right:5em;\n  padding:1em;\n}"
+#define DEFAULT_CSS	L"body {\n  margin-left:10em;\n  max-width:50%;\n}\n\nh2 {\n margin-bottom:2px;\n}\n\ndiv.post_title h3 {\n  margin-bottom:2px;\n  margin-top:0px;\n}\n\n.icon {\n  float:left;\n  width:64px;\n  height:64px;\n  padding-right:10px;\n}\n\nimg.post {\n  display: block;\n  margin-left: auto;\n  margin-right: auto;\n  max-width: 75%;\n clear:both;\n}\n\ndiv.post_head {\n  display:inline-block;\n  width:100%;\n  clear:both;\n}\n\ndiv.foot {\nmargin: auto;\nwidth: 15%;\npadding-top: 1em;\nfont-size: larger;\n}\n\ndiv.post_title {\n vertical-align:top;\n float:left;\n display:inline-block;\n  overflow-wrap: break-word;\n  hyphens: auto;\n width: -webkit-calc(100% - 80px);\n  width:    -moz-calc(100% - 80px);\n  width:         calc(100% - 80px);\n}\n\ndiv.post_image_wrapper {\n  margin-left:auto;\n  margin-right:auto;\n  display:block;\n  clear:both;\n text-align:center;\n}\ndiv.post_body {\n  float:left;\n}\n\n@media only screen and (max-width: 600px) {\n  body{\n  margin-left: 1em;\n  margin-right: 1em;\n  max-width: 100%;\n  }\n  img.post {\n   display:block;\n        margin-left:auto;\n        margin-right:auto;\n        max-width:100%;\n        clear:both;\n  }\n}\nblockquote {\n  border:1px solid gray;\n  background-color:#eeeeee;\n  margin-left:5em;\n  margin-right:5em;\n  padding:1em;\n}"
 #define DEFAULT_JAVASCRIPT	L""
 #define DEFAULT_ABOUT_PAGE	L"[about page here]"
 
@@ -71,6 +71,7 @@ typedef struct site_info {
 	wchar_t *footer;
 	int index_size;
 	wchar_t *tagline;	
+	wchar_t *icons_dir;
 } site_info;
      
 struct pp_page;	// (forward declaration)
@@ -117,3 +118,4 @@ void write_single_page(pp_page* page, char* path);
 void strip_terminal_newline(wchar_t *s, char *t);
 wchar_t* explode_tags(wchar_t* input);
 wchar_t* legible_date(time_t when);
+wchar_t* string_from_int(long int n);
