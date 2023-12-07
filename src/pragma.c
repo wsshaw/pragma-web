@@ -159,11 +159,18 @@ int main(int argc, char *argv[]) {
 
 	// ...and build the indices
 	wchar_t *main_index = build_index(page_list, config, 0);
-	// write it, etc.
+	
+	// write indices to disk
+	char *index_destination = malloc(strlen(pragma_output_directory) + 20);
+	strcpy(index_destination, pragma_output_directory);
+	strcat(index_destination, "index.html");
+	write_file_contents(index_destination, main_index);
+
+	// clean up from index generation
+	free(index_destination);
 	free(main_index);
 
 	char *destination_file;
-
 	for (pp_page *current = page_list; current != NULL; current = current->next) {
 		destination_file = malloc(256);		// i.e., find a place for the output
 		strcpy(destination_file, posts_output_directory);
@@ -183,6 +190,7 @@ int main(int argc, char *argv[]) {
 		free(the_page);
 		free(destination_file);
 	}
+	// clean up from site generation
 	free(page_list);
 	free(posts_output_directory);
 	free(config);

@@ -18,7 +18,7 @@
 #define PRAGMA_USAGE	"Usage: pragma -s [source] -o [output]\n\nwhere [source] is the site source directory and [output] is where you want the rendered site.\n\n\t-f: regenerate all html for all nodes\n\t-s: dry run, status report only\n\t-u: regenerate html only for nodes whose source was modified since last successful run\n\t-n: generate html output for new nodes (i.e., created since last run)\n\t-h: show this 'help'\n\nPlease see README.txt for usage details and examples.\n\n"
 
 /**
-*  Default file contents when creating a new site.  Some of these strings are hideous, but I prefer
+* Default file contents when creating a new site.  Some of these strings are hideous, but I prefer
 * to generate the files from this source rather than template files.  (The pragma executable should
 * be able to live anywhere with no supporting files)
 */
@@ -51,7 +51,7 @@ L"{DATE}"\
 L"{TAGS}"\
 L"<p>"
 
-#define DEFAULT_FOOTER		L"</body></html>\n"
+#define DEFAULT_FOOTER		L"</div></body></html>\n"
 
 #define LOAD_EVERYTHING		0
 #define LOAD_METADATA		1

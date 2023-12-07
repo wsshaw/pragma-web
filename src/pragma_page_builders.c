@@ -9,7 +9,7 @@
 #include "pragma_poison.h"
 
 /**
-* build the site index
+* build the site index. Allocates memory that must be freed. 
 */
 wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	if (!pages || start_page < 0)
@@ -43,9 +43,22 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		// build the output here, decouple the multi-index logic from the index builder, so 
 		// we just call this while iterating over the list, counter % 10 with the right start_page, etc
 //		wprintf(L"%ls\n", current->title);
+		wcscat(index_output, L"<div class=\"post_head\">\n<div class=\"post_icon\">\n");
+		wcscat(index_output, L"<img src=\"/img/icons/582093fd796544ab81fb9d491eae69a3.jpg\" class=\"icon\" alt=\"[AI-generated icon]\">\n");
+		wcscat(index_output, L"</div><div class=\"post_title\"><h3>");
+		// title
+		wcscat(index_output, L"</h3><i>Posted on");
+		// date
+		wcscat(index_output, L"</i><br>\n");
+		wcscat(index_output, explode_tags(current->tags));	
+		wcscat(index_output, L"</div></div>\n<div>");
+		wcscat(index_output, current->content);
+		wcscat(index_output, L"</div>\n");
 	}
+	
+	wcscat(index_output, site->footer);
 
-	return NULL;
+	return index_output;
 }
 
 /**
