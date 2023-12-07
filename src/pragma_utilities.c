@@ -377,3 +377,18 @@ wchar_t* string_from_int(long int n) {
 
 	return str;
 }
+
+wchar_t* wrap_with_element(wchar_t* text, wchar_t* start, wchar_t* close) {
+	wchar_t *output = malloc(( wcslen(text) + wcslen(start) + wcslen(close) + 1 ) * sizeof(wchar_t));
+	
+	if (!output) {
+		perror("! malloc() in wrap_with_element:");
+		return NULL;
+	}	
+
+	wcscpy(output, start);
+	wcscat(output, text);
+	wcscat(output, close);
+
+	return output;
+}

@@ -118,7 +118,11 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	page_output = replace_substring(page_output, L"{PAGETITLE}", page->title);
 	page_output = replace_substring(page_output, L"{BACK}", (page->prev ? page->prev->title : L""));
 	page_output = replace_substring(page_output, L"{FORWARD}", (page->next ? page->next->title : L"")); 
-	page_output = replace_substring(page_output, L"{TITLE}", page->title);
+
+	wchar_t* title_element = wrap_with_element(page->title, L"<h2>", L"</h2>");
+	page_output = replace_substring(page_output, L"{TITLE}", title_element);
+	free(title_element);
+
 	page_output = replace_substring(page_output, L"{TAGS}", explode_tags(page->tags));
 
 	wchar_t *formatted_date = legible_date(page->date_stamp);
