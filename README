@@ -25,15 +25,17 @@ The workflow is:
 	   the correct subdirectories and necessary files).  For example, pragma -c /your/site.
 	2. Add content to the site by using pragma -s /your/site -n.  This command makes a new text file in
 	   /your/site/dat/.  
-	3. 
+	3. Edit the new text file.
+	4. Preview your 
 
 What input does it expect?
+==========================
 
 What output does it generate?
 =============================
 It creates a complete website in a specified directory, with index.html at the root.  You don't have to specify 
 an output directory; the generator will default to the standard output directories in the site directory (./s, 
-./c, ./t for the site scoll, posts, and tag index, respectively).  Then you can deploy the site using the 
+./c, ./t for the site scroll, posts, and tag index, respectively).  Then you can deploy the site using the 
 local_deploy or live_deploy scripts. 
 
 If you specify a different output directory, the site builder will just put the content there.  This setup
@@ -43,13 +45,13 @@ can be useful for testing, and it omits the ./dat directory and yaml configurati
 	pragma -s ~/site_staging -o /var/www
 
 Are there any configuration options?
-
+====================================
 A few.  
 
 How do I customize the appearance of my site?
-
+=============================================
 There's no support for themes per se, but you can adjust some attributes of the site.  The default CSS file (s.css) 
 contains a list of every element class the generator creates.  You can edit this file to change the appearance, 
 formatting, and behavior of various page elements.
 
-You can also add functionality to the default JavaScript file (j.js).  This file is empty by default, and
+You can also add functionality to the default JavaScript file (j.js).  This file is empty by default.  

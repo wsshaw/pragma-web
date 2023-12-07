@@ -73,7 +73,7 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	wcscat(page_output, site->footer);
 
 	// strip newlines
-	strip_terminal_newline(page->title);
+	strip_terminal_newline(page->title, NULL);
 
 	// Replace the special {magic tokens}! Let's call a special magic function to do so.  
 	page_output = replace_substring(page_output, L"{PAGETITLE}", page->title);
@@ -94,12 +94,12 @@ wchar_t* explode_tags(wchar_t* input) {
 	if (!input) 
 		return NULL;
 
+	strip_terminal_newline(input, NULL);
+
 	wchar_t *tkn;
 	wchar_t *t = wcstok(input, L",", &tkn);
 	if (!t)
 		return input;
-
-	strip_terminal_newline(input);
 
 	// Realistically speaking, the tag list isn't going to be longer than 1024 characters.  
 	// Right?? Nothing can ever go wrong here!

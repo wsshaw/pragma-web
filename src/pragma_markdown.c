@@ -33,7 +33,7 @@
 #include "pragma_poison.h"
 
 // State indicators for parsing inline/formatting elements that can span multiple lines
-int bold = 0, italic = 0, within_list = 0;
+int bold = 0, italic = 0, within_list = 0, block_quote = 0;
 
 void md_header(wchar_t *line, wchar_t *output) {
 	int level = 0; 
@@ -69,7 +69,7 @@ void md_escape(const wchar_t *original, wchar_t *output, size_t output_size) {
 	if (original == NULL || output == NULL || output_size == 0) {
 		// Add error handling for null pointers or invalid output size
 		wprintf(L"Invalid input or output parameters.\n");
-        	return;
+			return;
 	}
 
 	size_t original_length = wcslen(original);
@@ -77,7 +77,7 @@ void md_escape(const wchar_t *original, wchar_t *output, size_t output_size) {
 	output_size = output_size > original_length ? original_length * 2 : output_size - 1;
 
 	if (output_size <= original_length) {
-        	wprintf(L"Output buffer size is too small.\n");
+			wprintf(L"Output buffer size is too small.\n");
 		return;
 	}
 
@@ -88,7 +88,7 @@ void md_escape(const wchar_t *original, wchar_t *output, size_t output_size) {
 			output[j++] = original[++i]; // next is literal
 		else 
 			output[j++] = original[i];
-        }
+		}
 	output[j] = L'\0';
 }
 
@@ -118,9 +118,9 @@ void md_inline(wchar_t *original, wchar_t *output) {
 				size_t img_alt_length = end - start + 1;
 
 				// Isolate alt text 
-				wchar_t altText[img_alt_length + 1];
-				wcsncpy(altText, original + start, img_alt_length); // was -1
-				altText[img_alt_length] = L'\0';
+				wchar_t alt_text[img_alt_length + 1];
+				wcsncpy(alt_text, original + start, img_alt_length); // was -1
+				alt_text[img_alt_length] = L'\0';
 
 				// Skip ']('
 				i += 3;
@@ -131,18 +131,18 @@ void md_inline(wchar_t *original, wchar_t *output) {
 				end = i;
 
 				size_t img_url_length = end - start + 1;
-				wchar_t imageUrl[img_url_length + 1];
+				wchar_t image_url[img_url_length + 1];
 
-				wcsncpy(imageUrl, original + start, img_url_length); // was length - 1
-				imageUrl[img_url_length] = L'\0';
+				wcsncpy(image_url, original + start, img_url_length); // was length - 1
+				image_url[img_url_length] = L'\0';
 
 				// tk support for caption 
 
 				// Construct the <img> tag
 				append(L"<img src=\"", output, &j);
-				append(imageUrl, output, &j);
+				append(image_url, output, &j);
 				append(L"\" alt=\"", output, &j);
-				append(altText, output, &j);
+				append(alt_text, output, &j);
 				append(L"\">", output, &j);
 			} else {
 				output[j++] = original[i];
@@ -170,7 +170,7 @@ wchar_t* parse_markdown(wchar_t *input) {
 
 	// Use this instead of strtok() (or whatever its 'wide' equivalent is) because we need to keep the newlines
   	while((e = wcschr(s, L'\n'))) {
-    		int line_length = (int)(e - s + 1);
+		int line_length = (int)(e - s + 1);
 		wchar_t *line = malloc((line_length + 1) * sizeof(wchar_t)); 	
 
 		if (line == NULL) { printf("malloc() failed to allocate space for parsing a line in parse_markdown!"); }
@@ -187,7 +187,6 @@ wchar_t* parse_markdown(wchar_t *input) {
 		if (fmt == NULL) { printf("malloc() failed in parsing markdown!\n"); }
 		md_inline(esc, fmt);
 
-		// hey this sucks man 
 		if (fmt[0] == L'#') {
 			md_header(fmt, output);
 		} else if (fmt[0] == L'-' && fmt[1] == L' ') {
@@ -196,12 +195,22 @@ wchar_t* parse_markdown(wchar_t *input) {
 				append(L"<ul>", output, NULL); 
 			}
 			md_list(fmt, output);
+		} else if (fmt[0] == L'>') {
+			if (!block_quote) {
+				block_quote = 1;
+				append(L"<blockquote>", output, NULL);
+			}
+			md_paragraph(fmt + 1, output);
 		} else if ((fmt[0] == '\0') || (fmt[0] == '\n')) {
 			md_empty_line(output);
 		} else {
 			if (within_list) {
 				within_list = 0;
 				append(L"</ul>", output, NULL);
+			} 
+			if (block_quote) { 
+				block_quote = 0;
+				append(L"</blockquote>", output, NULL);
 			}
 			md_paragraph(fmt, output);
 		}
@@ -221,6 +230,8 @@ wchar_t* parse_markdown(wchar_t *input) {
 		append(L"</em>", output, NULL);
 	if (italic) 
 		append(L"</i>", output, NULL);
+	if (block_quote)
+		append(L"</blockquote>", output, NULL);
 	return output;		  
 }
 

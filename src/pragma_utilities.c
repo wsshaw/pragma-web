@@ -128,61 +128,52 @@ int write_file_contents(const char *path, const wchar_t *content) {
 * read_file_contents: Utility function to read a file and return its contents as a wchar_t pointer.
 */
 wchar_t* read_file_contents(const char *path) {
-    // Open the file in wide character mode
-    FILE *file = fopen(path, "r");
+	FILE *file = fopen(path, "r");
 
-    // Check if the file is open
-    if (!file) {
-        perror("Error opening file");
-        return NULL; // Return NULL to indicate an error
-    }
+	if (!file) {
+		perror("Error opening file");
+		return NULL; 
+	}
 
-    // Set the locale to handle wide characters
-    //setlocale(LC_ALL, "");
+	wint_t ch;
+	wchar_t *content = NULL;
+	size_t contentSize = 0;
+	size_t index = 0;
 
-    // Read the content of the file into a wide character string
-    wint_t ch;
-    wchar_t *content = NULL;
-    size_t contentSize = 0;
-    size_t index = 0;
+	while ((ch = fgetwc(file)) != WEOF) {
+		if (index == contentSize) {
+			// Expand the buffer if needed
+			contentSize += 10; 
+			wchar_t *temp = realloc(content, contentSize * sizeof(wchar_t));
+			if (!temp) {
+				perror("realloc()");
+				free(content);
+				fclose(file);
+				return NULL; 
+			}
+			content = temp;
+		}
 
-    while ((ch = fgetwc(file)) != WEOF) {
-        if (index == contentSize) {
-            // Expand the buffer if needed
-            contentSize += 10;  // You can adjust the size as needed
-            wchar_t *temp = realloc(content, contentSize * sizeof(wchar_t));
-            if (!temp) {
-                perror("Error reallocating memory");
-                free(content);
-                fclose(file);
-                return NULL; // Return NULL to indicate an error
-            }
-            content = temp;
-        }
+		content[index++] = ch;
+	}
 
-        content[index++] = ch;
-    }
+	if (index < contentSize) {
+		content[index] = L'\0';
+	} else {
+		wchar_t *temp = realloc(content, (contentSize + 1) * sizeof(wchar_t));
+		if (!temp) {
+			perror("realloc()");
+			free(content);
+			fclose(file);
+			return NULL; 
+		}
+		content = temp;
+		content[index] = L'\0';
+	}
 
-    // Null-terminate the wide character string
-    if (index < contentSize) {
-        content[index] = L'\0';
-    } else {
-        // Expand the buffer one more time for the null terminator
-        wchar_t *temp = realloc(content, (contentSize + 1) * sizeof(wchar_t));
-        if (!temp) {
-            perror("Error reallocating memory");
-            free(content);
-            fclose(file);
-            return NULL; // Return NULL to indicate an error
-        }
-        content = temp;
-        content[index] = L'\0';
-    }
-
-    // Close the file
-    fclose(file);
-
-    return content; // Return the wide character string
+	// Close the file
+	fclose(file);
+	return content; 
 }
 
 /**
@@ -203,7 +194,7 @@ void append(wchar_t *string, wchar_t *result, size_t *j) {
 	if (string == NULL || result == NULL) {
 		printf("! Invalid arguments in append(): string argument is%s null; result is%s null\n", 
 			!string ? "" : " not", !result ? "" : " not" );
-        	return;
+			return;
 	}
 
 	size_t start = j ? *j : wcslen(result);
@@ -211,8 +202,8 @@ void append(wchar_t *string, wchar_t *result, size_t *j) {
 
 	if (start + length < start || start + length >= SIZE_MAX) {
 		printf("! buffer overflow in append()\n");
-        	return;
-    	}
+			return;
+		}
 
 	for (size_t i = 0; i < length; i++)
 		result[start + i] = string[i];
@@ -241,7 +232,7 @@ pp_page* get_item_by_key(time_t target, pp_page* list) {
 * parse_site: iterate over the list of loaded pages and call the necessary functions to parse the Markdown.
 * This overwrites the content member of the page struct, which also gets reallocated if necessary.
 */
-void parse_site(pp_page* page_list) {
+void parse_site_markdown(pp_page* page_list) {
 	for (pp_page *current = page_list; current != NULL; current = current->next) {
 		// Parse the content with the markdown parser...
 		wchar_t *markdown_out = parse_markdown(current->content);
@@ -271,7 +262,7 @@ pp_page* merge(pp_page* left, pp_page* right) {
 	return (left == NULL || right == NULL) ? (left == NULL ? right : left) :
 		(left->date_stamp >= right->date_stamp) ? 
 		(left->next = merge(left->next, right), left->next->prev = left, left->prev = NULL, left) :
-		(right->next = merge(left, right->next), right->next->prev = right, right->prev = NULL, right);
+		(right->next = merge(left, right->next), right->next->prev = right, right->prev = NULL, right); // :-D
 }
 
 pp_page* merge_sort(pp_page* head) {
@@ -294,7 +285,7 @@ pp_page* merge_sort(pp_page* head) {
 
 // Convenience function to sort the site linked list in place
 void sort_site(pp_page** head) {
-    *head = merge_sort(*head);
+	*head = merge_sort(*head);
 }
 
 /**
@@ -333,15 +324,35 @@ wchar_t* replace_substring(wchar_t *str, const wchar_t *find, const wchar_t *rep
 	wmemcpy(new_str, str, pos - str);
 	wmemcpy(new_str + (pos-str), replace, wcslen(replace));
 	wcscpy(new_str + (pos - str) + wcslen(replace), pos + wcslen(find));
-    	return new_str;
+		return new_str;
 }
 
-void strip_terminal_newline(wchar_t *s) {
-    // Find last occurrence of '\n'...
-    wchar_t *newline = wcsrchr(s, L'\n');
-    // ...and if there is one, replace it with the null terminator
-    if (newline != NULL) {
-        *newline = L'\0';
-    }
+/**
+* strip_terminal_newline: given either a wide character string or a regular char string (or both,
+* if you really want to), remove the last newline, but only if it's at the very end of the string.  
+*/
+void strip_terminal_newline(wchar_t *s, char *t) {
+	if (!s && !t)
+		return;
+
+	size_t marker = 0;
+
+	if (s) {
+		marker = wcslen(s) - 1;
+		if (!wcscmp(s + marker, L"\n"))
+			s[marker] = L'\0';
+		// Find last occurrence of '\n'...
+	//	wchar_t *newline = wcsrchr(s, L'\n');
+		// ...and if there is one, replace it with the null terminator
+	//	if (newline != NULL) {
+	//		*newline = L'\0';
+	//	}
+	} 
+
+	if (t) {
+		marker = strlen(t) - 1;
+		if (!strcmp(t + marker, "\n"))
+			t[marker] = '\0';
+	}
 }
 

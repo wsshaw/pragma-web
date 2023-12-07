@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 		// file to allow for various staging possibilities/temporary setups.  So they need to be
 		// specified here or in whatever script calls pragma builder.
 		if (strcmp(argv[i], "-s") == 0) {
-            		if (i + 1 < argc) {
+					if (i + 1 < argc) {
 				// Does the source directory exist?  Is it readable?
 				if (!check_dir(argv[i+1], S_IRUSR)) {
 					printf("=> Error: source directory (%s) does not exist or is not readable.\n", argv[i+1]);
@@ -73,14 +73,14 @@ int main(int argc, char *argv[]) {
 					exit(EXIT_FAILURE);
 				} else {
 					pragma_source_directory = argv[i + 1];
-                			printf("=> Using source directory %s\n", pragma_source_directory); 
+							printf("=> Using source directory %s\n", pragma_source_directory); 
 					source_specified = true;
 					++i;
 				}
-            		} else {
-                		printf("! Error: no directory specified after -s.\n");
+					} else {
+						printf("! Error: no directory specified after -s.\n");
 				exit(EXIT_FAILURE);
-            		}
+					}
 		} else if (strcmp(argv[i], "-o") == 0) {
 			if (i + 1 < argc) {
 				// Does the output directory exist?  Is it writable?
@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
 			}
 		} else if (strcmp(argv[i], "-c") == 0) {
 			if (i > 1) {
-					printf("Not in first");
+				printf("Not in first");
 			}
 			if (i + 1 < argc) {
 				// Create a new site. We won't make a directory that doesn't exist, though.
@@ -133,11 +133,11 @@ int main(int argc, char *argv[]) {
 		} else if (strcmp(argv[i], "-h") == 0) {
 			usage();
 			exit(EXIT_SUCCESS);
-        	} else {
+			} else {
 			// :-D
-        	}
+			}
 
-    	}
+		}
 
 	site_info* config = load_site_yaml(pragma_source_directory);
 	if (config == NULL) {
@@ -145,10 +145,19 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
+	// FIXME: For testing/development purposes, all this stuff is here but it obviously needs to
+	// be moved 
+
+	// Load the site sources from the specified directory
 	pp_page* page_list = load_site( 0, SITE_SOURCES );
+
+	// Ensure that the list is sorted by date, with the newest content first
 	sort_site(&page_list);
 
-	parse_site(page_list);
+	// Process the site sources: parse the markdown content...
+	parse_site_markdown(page_list);
+
+	// ...and build the indices
 	wchar_t *main_index = build_index(page_list, config, 0);
 	// write it, etc.
 	free(main_index);
@@ -160,26 +169,16 @@ int main(int argc, char *argv[]) {
 		strcpy(destination_file, posts_output_directory);
 		strcat(destination_file, char_convert(current->date));
 
-		strip_terminal_newline(destination_file);
+		strip_terminal_newline(NULL, destination_file);
 
 		strcat(destination_file, ".html");
 
-		//wchar_t *markdown_out = parse_markdown(current->content);
-		//printf("Lol, %s, %s.\n", char_convert(current->date), destination_file);
-		//wprintf(L"=====================================\n");
-        	wprintf(L"Title: %ls\n", current->title);
-        	wprintf(L"Tags: %ls\n", current->tags);
-        	//wprintf(L"Date: %ls\n", current->date); 
-		//wprintf(L"MARK DOWN PARSED CONTENT.\n-------%ls\n--------\n", markdown_out);
-        	//wprintf(L"🤡Content: %ls\n", current->content);
-        	//wprintf(L"Last Modified: %ld\n", (long)current->last_modified);
-        	//wprintf(L"Date Stamp: %lld\n", (long long)current->date_stamp);
-		//wprintf(L"=====================================\n");
-        	printf("\n"); 
+		wprintf(L"Title: %ls\n", current->title);
+		wprintf(L"Tags: %ls\n", current->tags);
+		printf("\n"); 
 		// Need to check the right subdirectory here
 		//wprintf(L"%ls.\n", build_single_page(current));
 		wchar_t *the_page = build_single_page(current, config);
-		//wprintf(L"FUCK!\n%ls\n", the_page);
 		write_file_contents(destination_file, the_page);
 		free(the_page);
 		free(destination_file);
