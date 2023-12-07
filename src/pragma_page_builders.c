@@ -47,7 +47,12 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		wcscat(index_output, L"<img src=\"/img/icons/582093fd796544ab81fb9d491eae69a3.jpg\" class=\"icon\" alt=\"[AI-generated icon]\">\n");
 		wcscat(index_output, L"</div><div class=\"post_title\"><h3>");
 		// title
-		wcscat(index_output, L"</h3><i>Posted on");
+		wcscat(index_output, L"</h3><i>Posted on ");
+
+		wchar_t *formatted_date = legible_date(current->date_stamp);
+		wcscat(index_output, formatted_date);
+		free(formatted_date);
+
 		// date
 		wcscat(index_output, L"</i><br>\n");
 		wcscat(index_output, explode_tags(current->tags));	

@@ -116,3 +116,4 @@ wchar_t* replace_substring(wchar_t *str, const wchar_t *find, const wchar_t *rep
 void write_single_page(pp_page* page, char* path);
 void strip_terminal_newline(wchar_t *s, char *t);
 wchar_t* explode_tags(wchar_t* input);
+wchar_t* legible_date(time_t when);

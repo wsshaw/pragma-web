@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <wchar.h>
 #include <locale.h>
+#include <time.h>
 
 #include "pragma_poison.h"
 
@@ -356,3 +357,15 @@ void strip_terminal_newline(wchar_t *s, char *t) {
 	}
 }
 
+/**
+* legible_date: given an epoch timestamp, convert it to a legible date, e.g. "24 December 1980."
+* Allocates memory that must be freed.
+*/
+wchar_t* legible_date(time_t when) {
+	struct tm t;
+	wchar_t *output = malloc(64 * sizeof(wchar_t));
+
+	t = *localtime(&when);
+	wcsftime(output, 64, L"%Y-%m-%d %H:%M:%S", &t);
+	return output;
+}
