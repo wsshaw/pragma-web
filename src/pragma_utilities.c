@@ -339,16 +339,18 @@ void strip_terminal_newline(wchar_t *s, char *t) {
 	size_t marker = 0;
 
 	if (s) {
-		marker = wcslen(s) - 1;
-		if (!wcscmp(s + marker, L"\n"))
-			s[marker] = L'\0';
-	} 
-
-	if (t) {
-		marker = strlen(t) - 1;
-		if (!strcmp(t + marker, "\n"))
-			t[marker] = '\0';
+		marker = wcslen(s);
+		if (marker > 0 && s[marker - 1] == L'\n') {
+			s[marker - 1] = L'\0';
+		}
 	}
+	if (t) {
+		marker = strlen(t);
+		if (marker > 0 && t[marker - 1] == '\n') {
+			t[marker - 1] = '\0';
+		}
+	}
+
 }
 
 /**

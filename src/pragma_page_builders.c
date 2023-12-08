@@ -41,7 +41,6 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		
 		// build the output here, decouple the multi-index logic from the index builder, so 
 		// we just call this while iterating over the list, counter % 10 with the right start_page, etc
-//		wprintf(L"%ls\n", current->title);
 		wcscat(index_output, L"<div class=\"post_head\">\n<div class=\"post_icon\">\n");
 		wcscat(index_output, L"<img src=\"/img/icons/582093fd796544ab81fb9d491eae69a3.jpg\" class=\"icon\" alt=\"[AI-generated icon]\">\n");
 		// TODO: respect the root URL of the site here and elsewhere
@@ -63,7 +62,12 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 
 		// date
 		wcscat(index_output, L"</i><br>\n");
-		wcscat(index_output, explode_tags(current->tags));	
+
+		// tags
+		wchar_t* tag_element = explode_tags(current->tags);
+		wcscat(index_output, tag_element);	
+		free(tag_element);
+
 		wcscat(index_output, L"</div></div>\n<div>");
 		wcscat(index_output, current->content);
 		wcscat(index_output, L"</div><hr>\n");
@@ -123,9 +127,11 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	page_output = replace_substring(page_output, L"{TITLE}", title_element);
 	free(title_element);
 
-	page_output = replace_substring(page_output, L"{TAGS}", explode_tags(page->tags));
+	wchar_t* tag_element = explode_tags(page->tags);
+	page_output = replace_substring(page_output, L"{TAGS}", tag_element);
+	free(tag_element);
 
-	wchar_t *formatted_date = legible_date(page->date_stamp);
+	wchar_t *formatted_date = wrap_with_element(legible_date(page->date_stamp), L"<i>", L"</i><br>");
 	page_output = replace_substring(page_output, L"{DATE}", formatted_date);
 	free(formatted_date);
 
@@ -139,19 +145,28 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 wchar_t* explode_tags(wchar_t* input) {
 	if (!input) 
 		return NULL;
+	// copy the input somewhere so wcstok() doesn't modify it
+	wchar_t* in = malloc((wcslen(input) + 10) * sizeof(wchar_t));
 
-	strip_terminal_newline(input, NULL);
+	if (!in) {
+		perror("malloc in explode_tags(): ");
+		return input;
+	}
+
+	wcscpy(in, input);
+	strip_terminal_newline(in, NULL);
 
 	wchar_t *tkn;
-	wchar_t *t = wcstok(input, L",", &tkn);
+	wchar_t *t = wcstok(in, L",", &tkn);
 	if (!t)
-		return input;
+		return in;
 
 	// Realistically speaking, the tag list isn't going to be longer than 1024 characters.  
 	// Right?? Nothing can ever go wrong here!
-	wchar_t *output = malloc(1024 * sizeof(wchar_t));
-	wcscpy(output, L"Tagged ");
+	wchar_t *output = malloc(4096 * sizeof(wchar_t));
+	wcscpy(output, L"Tagged "); 
 	while (t) {
+	//	strip_terminal_newline(t, NULL);
 		wcscat(output, L"<a href=\"/t/");
 		wcscat(output, t);
 		wcscat(output, L".html\">");
@@ -161,6 +176,8 @@ wchar_t* explode_tags(wchar_t* input) {
 		t = wcstok(NULL, L",", &tkn);
 		wcscat(output, t ? L", " : L"");
 	}
+	free(in);
+
 	return output;
 }
 

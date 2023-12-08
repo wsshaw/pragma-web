@@ -194,10 +194,6 @@ int main(int argc, char *argv[]) {
 		free(ds); free(d);
 		strip_terminal_newline(NULL, destination_file);
 		strcat(destination_file, ".html");
-
-		wprintf(L"Title: %ls\n", current->title);
-		wprintf(L"Tags: %ls\n", current->tags);
-		printf("\n"); 
 		// Need to check the right subdirectory here
 		//wprintf(L"%ls.\n", build_single_page(current));
 		wchar_t *the_page = build_single_page(current, config);
