@@ -222,10 +222,9 @@ void append(wchar_t *string, wchar_t *result, size_t *j) {
 pp_page* get_item_by_key(time_t target, pp_page* list) { 
 	if (!list)
 		return NULL;
-	for (pp_page *c = list ; c != NULL ; c = c->next) {
+	for (pp_page *c = list ; c != NULL ; c = c->next) 
 		if (c->date_stamp == target) 
 			return c;
-	}
 	return NULL;
 }
 
@@ -306,6 +305,35 @@ char* char_convert(const wchar_t* w) {
 }
 
 /**
+* Convert char to wchar_t. 
+*/
+wchar_t* wchar_convert(const char* c) {
+
+	size_t len = mbstowcs(NULL, c, 0);
+   
+	if (len < 0) {
+		perror("Can't convert character string to wide characters (wchar_convert()): ");
+		return NULL;
+	}
+ 
+	wchar_t* w = malloc((len + 1) * sizeof(wchar_t));
+
+	if (w == NULL) {
+		perror("malloc() failure in wchar_convert!");
+		return NULL;
+	}
+
+	if (mbstowcs(w, c, len + 1) < 0 ) {
+        	perror("Error converting character to wide char: ");
+		free(w);
+        	return NULL;
+	}
+	
+	return w;
+
+}
+
+/**
 * replace_substring: given str, find, and replace as arguments, do just that -- replace 'find' with 
 * 'replace' in the supplied string, using wmemcpy()/wcscpy(). 
 */
@@ -367,6 +395,9 @@ wchar_t* legible_date(time_t when) {
 }
 
 wchar_t* string_from_int(long int n) {
+	if (!n)
+		return NULL;
+
 	int c = 0, x = n;
 
 	while (x != 0) { 

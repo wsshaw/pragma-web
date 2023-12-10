@@ -23,7 +23,8 @@ int main(int argc, char *argv[]) {
 	bool force_all_specified = false;
 	bool updated_only = false;
 	bool create_site_specified = false;
-	
+
+	// need at least some kind of argument	
 	if ( argc == 1 ) {
 		usage();
 		exit(EXIT_SUCCESS);
@@ -77,10 +78,10 @@ int main(int argc, char *argv[]) {
 					source_specified = true;
 					++i;
 				}
-					} else {
-						printf("! Error: no directory specified after -s.\n");
+			} else {
+				printf("! Error: no directory specified after -s.\n");
 				exit(EXIT_FAILURE);
-					}
+			}
 		} else if (strcmp(argv[i], "-o") == 0) {
 			if (i + 1 < argc) {
 				// Does the output directory exist?  Is it writable?
@@ -97,7 +98,7 @@ int main(int argc, char *argv[]) {
 						exit(EXIT_FAILURE);
 					}
 					
-					// Figure out the posts directory, given the site base output dir
+					// Figure out the posts directory, given the site base output dir.  Allow for trailing /, or not.
 					strcpy(posts_output_directory, pragma_output_directory);
 					strcat(posts_output_directory, pragma_output_directory[strlen(pragma_output_directory)-1] != '/' ? "/" : "");
 					strcat(posts_output_directory, SITE_POSTS);	
@@ -133,11 +134,11 @@ int main(int argc, char *argv[]) {
 		} else if (strcmp(argv[i], "-h") == 0) {
 			usage();
 			exit(EXIT_SUCCESS);
-			} else {
+		} else {
 			// :-D
-			}
-
 		}
+
+	}
 
         if (source_specified && !destination_specified) {
 		pragma_output_directory = pragma_source_directory;
@@ -154,21 +155,28 @@ int main(int argc, char *argv[]) {
 	}
 
 	site_info* config = load_site_yaml(pragma_source_directory);
+
 	if (config == NULL) {
 		printf("! Error: Can't proceed without site configuration! Aborting.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	// FIXME: For testing/development purposes, all this stuff is here but it obviously needs to
-	// be moved 
+	// be moved. 
 
 	// Load the site sources from the specified directory
 	pp_page* page_list = load_site( 0, SITE_SOURCES );
+	wprintf(L"It's so real to have %ls\n", config->icons_dir);
+	char *icons_directory = char_convert(config->icons_dir); // :(
 
-	// Ensure that the list is sorted by date, with the newest content first
+	// load the list of site icons and store them in config->site_icons; assign them
+	load_site_icons(pragma_source_directory, icons_directory, config);
+	assign_icons(page_list, config);
+
+	// Ensure that the list of sources is sorted by date, with the newest content first
 	sort_site(&page_list);
 
-	// Process the site sources: parse the markdown content...
+	// Process those sources: parse the markdown content...
 	parse_site_markdown(page_list);
 
 	// ...and build the indices

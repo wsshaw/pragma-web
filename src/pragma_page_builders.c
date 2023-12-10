@@ -108,10 +108,29 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 		return NULL;
 	}
 
-	wchar_t *next_url;
-	wchar_t *previous_url;
+	// get links to previous and next posts, if available
+	wchar_t *next_id = page->next ? string_from_int(page->next->date_stamp) : NULL;
+	wchar_t *previous_id = page->prev ? string_from_int(page->prev->date_stamp) : NULL;
+
+	wchar_t *next_link = next_id ? malloc((wcslen(next_id) + 32) * sizeof(wchar_t)) : NULL;
+	wchar_t *prev_link = previous_id ? malloc((wcslen(previous_id) + 32) * sizeof(wchar_t)) : NULL;
+
+	// older page link
+	if (next_id != NULL) {
+		wcscpy(next_link, L"<a href=\"");
+		wcscat(next_link, next_id);
+		wcscat(next_link, L".html\">older</a> | ");
+	} 
+
+	// newer page link	
+	if (previous_id != NULL) {
+		wcscpy(prev_link, L" | <a href=\"");
+		wcscat(prev_link, previous_id);
+		wcscat(prev_link, L".html\">newer</a>");
+	}
 
 	wcscpy(page_output, site->header);
+	wcscat(page_output, page->icon);
 	wcscat(page_output, page->content);
 	wcscat(page_output, site->footer);
 
@@ -120,8 +139,14 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 
 	// Replace the special {magic tokens}! Let's call a special magic function to do so.  
 	page_output = replace_substring(page_output, L"{PAGETITLE}", page->title);
-	page_output = replace_substring(page_output, L"{BACK}", (page->prev ? page->prev->title : L""));
-	page_output = replace_substring(page_output, L"{FORWARD}", (page->next ? page->next->title : L"")); 
+	page_output = replace_substring(page_output, L"{FORWARD}", (page->prev ? prev_link : L""));
+	page_output = replace_substring(page_output, L"{BACK}", (page->next ? next_link : L"")); 
+
+	// Free memory from string twiddling
+	free(previous_id); 
+	free(next_id);
+	free(prev_link);
+	free(next_link);
 
 	wchar_t* title_element = wrap_with_element(page->title, L"<h2>", L"</h2>");
 	page_output = replace_substring(page_output, L"{TITLE}", title_element);
@@ -164,7 +189,7 @@ wchar_t* explode_tags(wchar_t* input) {
 	// Realistically speaking, the tag list isn't going to be longer than 1024 characters.  
 	// Right?? Nothing can ever go wrong here!
 	wchar_t *output = malloc(4096 * sizeof(wchar_t));
-	wcscpy(output, L"Tagged "); 
+	wcscpy(output, L""); 
 	while (t) {
 	//	strip_terminal_newline(t, NULL);
 		wcscat(output, L"<a href=\"/t/");

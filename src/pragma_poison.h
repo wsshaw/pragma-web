@@ -57,6 +57,9 @@ L"<p>"
 #define LOAD_METADATA		1
 #define LOAD_FILENAMES_ONLY	2
 
+#define SIZE_OF(array) ( sizeof((array)) / sizeof((array[0])) )
+
+
 extern const char *pragma_directories[];
 extern const char *pragma_basic_files[];
 
@@ -72,6 +75,8 @@ typedef struct site_info {
 	int index_size;
 	wchar_t *tagline;	
 	wchar_t *icons_dir;
+	char **icons;
+	int icon_sentinel;
 } site_info;
      
 struct pp_page;	// (forward declaration)
@@ -120,3 +125,7 @@ wchar_t* explode_tags(wchar_t* input);
 wchar_t* legible_date(time_t when);
 wchar_t* string_from_int(long int n);
 wchar_t* wrap_with_element(wchar_t* text, wchar_t* start, wchar_t* close);
+void load_site_icons(char *root, char *subdir, site_info *config);
+void directory_to_array(const char *path, char ***filenames, int *count);
+void assign_icons(pp_page *pages, site_info *config);
+wchar_t* wchar_convert(const char* c);

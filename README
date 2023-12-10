@@ -55,3 +55,8 @@ contains a list of every element class the generator creates.  You can edit this
 formatting, and behavior of various page elements.
 
 You can also add functionality to the default JavaScript file (j.js).  This file is empty by default.  
+
+
+There's a bug
+=============
+Probably quite a few!  
