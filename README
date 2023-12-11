@@ -59,4 +59,23 @@ You can also add functionality to the default JavaScript file (j.js).  This file
 
 There's a bug
 =============
-Probably quite a few!  
+Probably several!  Lots of opportunities for improvement, too.  For example, a lot of HTML formatting is hard-
+coded in magic strings, or generated with things like
+
+	wcscat(some_buffer, L"<li><h3"); 
+
+There are some incipient attempts at abstracting a bit of that logic, like the wrap_element() function.  But on
+the whole, it's all far short of a truly modular system that abstracts formatting/element generation from other
+concerns.  For my purposes, that's fine, and I'll address the limitations as/if needed.  
+
+Other smelly (but technically "fine") things include memory allocation, which could be more efficient in many
+places, and the fact that the site skeleton (header, footer, config yaml) is stored entirely in a C header file.
+Unicode/wide-character support was added after I started working on the project, and there are places where that
+retrofitting is probably evident in the form of sloppiness, needless char/wchar_t conversion routines, etc.
+
+Some design choices reflect a bias toward legibility and simplicity, despite my love of bloated ternary operators.
+The scroll generator could make more efficient use of memory with a pointer-to-a-pointer-to-a-pointer list of 
+years/months/posts; 
+
+I fix bugs as I discover them and add features as I need them, so the Github repo gets updated, albeit not on 
+a regular basis.  Anyone is welcome to incorporate improvements that help others!

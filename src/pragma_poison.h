@@ -51,14 +51,17 @@ L"{DATE}"\
 L"{TAGS}"\
 L"<p>"
 
-#define DEFAULT_FOOTER		L"</div></body></html>\n"
+#define DEFAULT_FOOTER		L"</div><!-- footer here --></body></html>\n"
 
 #define LOAD_EVERYTHING		0
 #define LOAD_METADATA		1
 #define LOAD_FILENAMES_ONLY	2
 
-#define SIZE_OF(array) ( sizeof((array)) / sizeof((array[0])) )
+#define MAX_MONTHLY_POSTS	128
 
+#define EMPTY_ARRAY_FLAG	(1 << 0)
+
+#define SIZE_OF(array) ( sizeof((array)) / sizeof((array[0])) )
 
 extern const char *pragma_directories[];
 extern const char *pragma_basic_files[];
@@ -113,7 +116,7 @@ pp_page* merge_sort(pp_page* head);
 void sort_site(pp_page** head);
 wchar_t* build_index(pp_page* pages, site_info *site, int start_page);
 wchar_t* build_single_page(pp_page* page, site_info *site);
-wchar_t* build_scroll(pp_page* pages);
+wchar_t* build_scroll(pp_page* pages, site_info *site);
 wchar_t* build_tag_index(pp_page* pages);
 void parse_site_markdown(pp_page* page_list);
 char* char_convert(const wchar_t* w);
@@ -129,3 +132,4 @@ void load_site_icons(char *root, char *subdir, site_info *config);
 void directory_to_array(const char *path, char ***filenames, int *count);
 void assign_icons(pp_page *pages, site_info *config);
 wchar_t* wchar_convert(const char* c);
+pp_page* get_item_by_key(time_t target, pp_page* list);

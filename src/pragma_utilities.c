@@ -395,9 +395,6 @@ wchar_t* legible_date(time_t when) {
 }
 
 wchar_t* string_from_int(long int n) {
-	if (!n)
-		return NULL;
-
 	int c = 0, x = n;
 
 	while (x != 0) { 
@@ -406,7 +403,7 @@ wchar_t* string_from_int(long int n) {
 	}
 
 	wchar_t* str = malloc((c + 1) * sizeof(wchar_t)); 
-	swprintf(str, c + 1, L"%ld", n); 
+	swprintf(str, c + 1, L"%ld", n == 0 ? 0 : n ); 
 
 	return str;
 }

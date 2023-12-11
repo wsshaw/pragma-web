@@ -166,7 +166,6 @@ int main(int argc, char *argv[]) {
 
 	// Load the site sources from the specified directory
 	pp_page* page_list = load_site( 0, SITE_SOURCES );
-	wprintf(L"It's so real to have %ls\n", config->icons_dir);
 	char *icons_directory = char_convert(config->icons_dir); // :(
 
 	// load the list of site icons and store them in config->site_icons; assign them
@@ -192,6 +191,20 @@ int main(int argc, char *argv[]) {
 	free(index_destination);
 	free(main_index);
 
+	// generate the scroll
+	wchar_t *main_scroll = build_scroll(page_list, config);
+	printf("=> Generated scoll.\n");
+	
+	// write scroll to disk
+	char *scroll_destination = malloc(strlen(pragma_output_directory) + 20);
+	strcpy(scroll_destination, pragma_output_directory);
+	strcat(scroll_destination, "s/index.html");
+	write_file_contents(scroll_destination, main_scroll);
+	
+	printf("=> Scroll written successfully to disk.\n");
+	free(scroll_destination);
+	free(main_scroll);
+	
 	char *destination_file;
 	for (pp_page *current = page_list; current != NULL; current = current->next) {
 		destination_file = malloc(256);		// i.e., find a place for the output
@@ -210,7 +223,10 @@ int main(int argc, char *argv[]) {
 		free(destination_file);
 	}
 	// clean up from site generation
+
+	wprintf(L"Generated site output. Cleaning up...\n");
 	free(page_list);
 	free(posts_output_directory);
 	free(config);
+	wprintf(L"Done.\n");
 }

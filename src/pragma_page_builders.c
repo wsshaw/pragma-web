@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <malloc/malloc.h>
 #include <wchar.h>
+#include <limits.h>
 
 #include "pragma_poison.h"
 
@@ -29,20 +30,18 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 
 	wcscpy(index_output, site->header);
 
-	wprintf(L"%ls", index_output);
-
 	for (pp_page *current = pages; current != NULL; current = current->next) {
 		if (counter <= skipahead && skipahead != 0) { 
 			counter++;
 			continue;
 		} 
+
 		// At this point, we're where we need to be in the list Render an index with site->index_size items 
 		// on it, or as many as we have, whichever is greater.  
-		
-		// build the output here, decouple the multi-index logic from the index builder, so 
-		// we just call this while iterating over the list, counter % 10 with the right start_page, etc
 		wcscat(index_output, L"<div class=\"post_head\">\n<div class=\"post_icon\">\n");
-		wcscat(index_output, L"<img src=\"/img/icons/582093fd796544ab81fb9d491eae69a3.jpg\" class=\"icon\" alt=\"[AI-generated icon]\">\n");
+		wcscat(index_output, L"<img class=\"icon\" alt=\"[AI-generated icon]\" src=\"/img/icons/"); //FIXME 
+		wcscat(index_output, current->icon);
+		wcscat(index_output, L"\">");
 		// TODO: respect the root URL of the site here and elsewhere
 		wcscat(index_output, L"</div><div class=\"post_title\"><h3><a href=\"/c/");
 
@@ -87,7 +86,6 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
         index_output = replace_substring(index_output, L"{DATE}", L"");
 	index_output = replace_substring(index_output, L"{PAGETITLE}", site->site_name);
 
-
 	return index_output;
 }
 
@@ -103,7 +101,7 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	wchar_t *page_output = malloc(j);
 
 	if (!page_output) {
-		wprintf(L"Unable to allocate memory for assembling page `%ls'!\n", page->title);
+		wprintf(L"! Unable to allocate memory for assembling page `%ls'!\n", page->title);
 		perror("malloc(): ");
 		return NULL;
 	}
@@ -130,12 +128,12 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	}
 
 	wcscpy(page_output, site->header);
+	// add the icon. FIXME: relatie paths
+	wcscat(page_output, L"<img class=\"icon\" alt=\"[AI-generated icon]\" src=\"/img/icons/");
 	wcscat(page_output, page->icon);
+	wcscat(page_output, L"\">\n");
 	wcscat(page_output, page->content);
 	wcscat(page_output, site->footer);
-
-	// strip newlines
-	strip_terminal_newline(page->title, NULL);
 
 	// Replace the special {magic tokens}! Let's call a special magic function to do so.  
 	page_output = replace_substring(page_output, L"{PAGETITLE}", page->title);
@@ -206,10 +204,131 @@ wchar_t* explode_tags(wchar_t* input) {
 	return output;
 }
 
-wchar_t* build_scroll(pp_page* pages) {
-	return NULL;
+/**
+* build_scroll: generate the site scroll (index of all content).  This output is organized by year (descending) and month/
+* day (ascending within year).  
+*/
+wchar_t* build_scroll(pp_page* pages, site_info* site) {
+	if (!pages) 
+		return NULL;
+
+	// Figure out the year bounds and how many years there are...
+	int min = INT_MAX, max = 0;
+	int c = 0, actual_year = 0;
+	struct tm *tm_info;
+
+	for (pp_page *p = pages; p != NULL ; p = p->next) {
+		tm_info = localtime(&p->date_stamp);
+		actual_year = tm_info->tm_year + 1900;
+
+		min = actual_year < min ? actual_year : min;
+		max = actual_year > max ? actual_year : max;
+
+		++c;
+	}
+
+	// We use a straightforward array structure instead of, say, ***datestamp_list 
+	// to keep things readable and simple.  The tradeoff is that it's less efficient
+	// in terms of memory usage and has an arbitrary built-in limit of 128 posts/mo.
+	// Update MAX_MONTHLY_POSTS as needed.
+	time_t calendar[(max - min) + 1][12][MAX_MONTHLY_POSTS];	
+
+	// Initialize the array with consistent values
+	for (int i = 0; i < (max - min) + 1 ; i++) {
+		for (int j = 0; j < 12 ; j++) {
+			for (int k = 0 ; k < MAX_MONTHLY_POSTS ; k++) {
+				calendar[i][j][k] = -1;
+			}
+		}
+	}
+
+	for (pp_page *p = pages; p != NULL; p = p->next) {
+		tm_info = localtime(&p->date_stamp);
+		actual_year = (tm_info->tm_year + 1900) - min;	// "actual" d/b/a "array offset"
+		// Find the next available bucket to store this timestamp
+		for (int i = 0 ; i < MAX_MONTHLY_POSTS; i++ ) {
+			if (calendar[actual_year][tm_info->tm_mon][i] == -1) {
+				calendar[actual_year][tm_info->tm_mon][i] = p->date_stamp;
+				break;
+			}
+		}
+	}
+
+	// allocate memory for output based on # of pages + header + footer + wiggle room
+	wchar_t *scroll_output = malloc(((c * 128) + wcslen(site->footer) + wcslen(site->header)) * sizeof(wchar_t));
+        wcscpy(scroll_output, site->header);
+
+	pp_page *item;
+	wchar_t *year, *link_filename, *link_date;
+	struct tm t;
+
+	// TODO: Make this a little smarter -- account for empty years (possible)
+	for (int i = (max - min) ; i > -1 ; i--) {
+		wcscat(scroll_output, L"<h2>");
+		year = string_from_int(min + i);
+		wcscat(scroll_output, year);
+		free(year);
+		wcscat(scroll_output, L"</h2>\n<ul>\n");
+		for (int j = 11 ; j > -1; j--) {
+			for (int k = 0; k < MAX_MONTHLY_POSTS ; k++) {
+				if (calendar[i][j][k] == -1) {
+					break;
+				} 
+				
+				item = get_item_by_key(calendar[i][j][k], pages);
+
+				if (k == 0) {
+	                                t = *localtime(&item->date_stamp);
+ 					wchar_t *temp = malloc(64 * sizeof(wchar_t));
+					wcsftime(temp, 64, L"%B", &t); 
+
+					// First of the month; start a list
+					wcscat(scroll_output, L"<li><h3>");
+					wcscat(scroll_output, temp);
+					wcscat(scroll_output, L"</h3></li><ul>\n");
+					free(temp);
+				}
+
+				// build a link with the (uh, hard-coded) relative path 
+				wcscat(scroll_output, L"<li><a href=\"../c/");
+
+				// assemble the correct filename                
+				link_filename = string_from_int(item->date_stamp);
+                		wcscat(scroll_output, link_filename);
+                		free(link_filename);
+
+				wcscat(scroll_output, L".html\">");
+				wcscat(scroll_output, item->title);
+				wcscat(scroll_output, L"</a> - ");
+
+				link_date = legible_date(item->date_stamp);
+				wcscat(scroll_output, link_date);
+				free(link_date);
+
+				wcscat(scroll_output, L"</li>\n");
+
+				if (calendar[i][j][k + 1] == -1) {
+					wcscat(scroll_output, L"</ul>\n");
+					break;
+				}
+			}
+		}
+
+		wcscat(scroll_output, L"</ul>\n");
+	}
+
+        scroll_output = replace_substring(scroll_output, L"{BACK}", L"");
+        scroll_output = replace_substring(scroll_output, L"{FORWARD}", L"");
+        scroll_output = replace_substring(scroll_output, L"{TITLE}", L"");
+        scroll_output = replace_substring(scroll_output, L"{TAGS}", L"");
+        scroll_output = replace_substring(scroll_output, L"{DATE}", L"");
+        scroll_output = replace_substring(scroll_output, L"{PAGETITLE}", L"All posts");
+
+	return scroll_output;
 }
 
 wchar_t* build_tag_index(pp_page* pages) {
+	if (!pages)
+		return NULL;
 	return NULL;
 }

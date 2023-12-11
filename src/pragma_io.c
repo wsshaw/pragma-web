@@ -54,10 +54,14 @@ pp_page* parse_file(const char* filename) {
 	}
 
 	while (fgetws(line, MAX_LINE_LENGTH, file) != NULL && wcscmp(line, L"###\n") != 0) {
-		if (wcsstr(line, L"title:") != NULL) 
+		if (wcsstr(line, L"title:") != NULL) {
 			wcscpy(page->title, line + wcslen(L"title:")); 
-		else if (wcsstr(line, L"tags:") != NULL)
+			strip_terminal_newline(page->title, NULL);	
+		}
+		else if (wcsstr(line, L"tags:") != NULL) {
 			wcscpy(page->tags, line + wcslen(L"tags:"));
+			strip_terminal_newline(page->tags, NULL);	
+		}
 		else if (wcsstr(line, L"date:") != NULL) {
 			wcscpy(page->date, line + wcslen(L"date:"));
 			page->date_stamp = (time_t)wcstod(page->date, NULL);
