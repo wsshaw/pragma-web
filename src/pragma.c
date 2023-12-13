@@ -1,13 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <stdbool.h>
-#include <wchar.h>
-#include <locale.h>
-#include <stddef.h>
-
 #include "pragma_poison.h"
 
 int main(int argc, char *argv[]) {
@@ -155,6 +145,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	site_info* config = load_site_yaml(pragma_source_directory);
+	wcscpy(config->base_dir, wchar_convert(pragma_source_directory));
 
 	if (config == NULL) {
 		printf("! Error: Can't proceed without site configuration! Aborting.\n");
@@ -204,6 +195,19 @@ int main(int argc, char *argv[]) {
 	printf("=> Scroll written successfully to disk.\n");
 	free(scroll_destination);
 	free(main_scroll);
+
+	// generate tag index
+	wchar_t *tag_index = build_tag_index(page_list, config);
+	printf("=> Generated tag index.\n");
+
+	char *tag_destination = malloc(strlen(pragma_output_directory) + 20);
+	strcpy(tag_destination, pragma_output_directory);
+	strcat(tag_destination, "t/index.html");
+	write_file_contents(tag_destination, tag_index);
+
+	printf("=> Tag index successfully written to disk.\n");
+	free(tag_destination);
+	free(tag_index);
 	
 	char *destination_file;
 	for (pp_page *current = page_list; current != NULL; current = current->next) {

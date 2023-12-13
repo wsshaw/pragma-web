@@ -1,4 +1,15 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <malloc/malloc.h>
 #include <stdbool.h>
+#include <wchar.h>
+#include <time.h>
+#include <locale.h>
+#include <stddef.h>
+#include <time.h>
 
 #define MAX_LINE_LENGTH 4096			// ...
 
@@ -78,6 +89,7 @@ typedef struct site_info {
 	int index_size;
 	wchar_t *tagline;	
 	wchar_t *icons_dir;
+	wchar_t *base_dir;
 	char **icons;
 	int icon_sentinel;
 } site_info;
@@ -95,6 +107,12 @@ typedef struct pp_page {
 	struct pp_page *prev;
 	wchar_t *icon;
 } pp_page; 
+
+struct tag_dict;
+typedef struct tag_dict {
+	wchar_t *tag;
+	struct tag_dict *next;
+} tag_dict;
 
 enum sort_types {
 	TITLE,
@@ -117,7 +135,6 @@ void sort_site(pp_page** head);
 wchar_t* build_index(pp_page* pages, site_info *site, int start_page);
 wchar_t* build_single_page(pp_page* page, site_info *site);
 wchar_t* build_scroll(pp_page* pages, site_info *site);
-wchar_t* build_tag_index(pp_page* pages);
 void parse_site_markdown(pp_page* page_list);
 char* char_convert(const wchar_t* w);
 site_info* load_site_yaml(char* path); 
@@ -133,3 +150,10 @@ void directory_to_array(const char *path, char ***filenames, int *count);
 void assign_icons(pp_page *pages, site_info *config);
 wchar_t* wchar_convert(const char* c);
 pp_page* get_item_by_key(time_t target, pp_page* list);
+wchar_t* build_tag_index(pp_page* pages, site_info* site);
+void append_tag(wchar_t *tag, tag_dict *tags);
+bool tag_list_contains(wchar_t *tag, tag_dict *tags);
+bool page_is_tagged(pp_page* p, wchar_t *t);
+void swap(tag_dict *a, tag_dict *b);
+void sort_tag_list(tag_dict *head);
+

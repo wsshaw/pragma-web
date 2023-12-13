@@ -1,12 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <sys/stat.h>
-#include <wchar.h>
-#include <locale.h>
-#include <time.h>
-
 #include "pragma_poison.h"
 
 const char *pragma_directories[] = {
@@ -421,4 +412,61 @@ wchar_t* wrap_with_element(wchar_t* text, wchar_t* start, wchar_t* close) {
 	wcscat(output, close);
 
 	return output;
+}
+
+// TODO: change explode_tags() to generate a linked list of strings or something!
+bool page_is_tagged(pp_page *p, wchar_t *t) {
+	wchar_t *in = wcsdup(p->tags);
+
+	wchar_t *tkn;
+	wchar_t *tn = wcstok(in, L",", &tkn);
+
+	if (!tn) {
+		free(in);
+		return false;
+	}
+
+	while (tn) {
+		strip_terminal_newline(tn, NULL);
+
+		if (wcscmp(t, tn) == 0)
+			return true;
+
+		tn = wcstok(NULL, L",", &tkn);
+	}
+
+	free(in);
+	return false;
+}
+
+/**
+* bubble sort stuff for tag list -- pretty purpose-specific I guess.
+*/
+void swap(tag_dict *a, tag_dict *b) {
+	wchar_t *temp = a->tag;
+	a->tag = b->tag;
+	b->tag = temp;
+}
+
+void sort_tag_list(tag_dict *head) {
+	int swapped;
+	tag_dict *ptr;
+	tag_dict *lptr = NULL;
+
+	if (head == NULL)
+		return;
+
+	do {
+		swapped = 0;
+		ptr = head;
+
+		while (ptr->next != lptr) {
+			if (wcscoll(ptr->tag, ptr->next->tag) > 0 ) {
+				swap(ptr, ptr->next);
+				swapped = 1;
+			}
+			ptr = ptr->next;
+		}
+		lptr = ptr;
+	} while (swapped);
 }

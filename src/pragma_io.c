@@ -4,14 +4,6 @@
 *
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <wchar.h>
-#include <time.h>
-
 #include "pragma_poison.h"
 
 // Given the path to a source file, parse its contents.  Return pointer to the page structure as outlined above.
@@ -125,8 +117,9 @@ site_info* load_site_yaml(char* path) {
 	config->header = malloc(4096);
 	config->footer = malloc(4096);
 	config->tagline = malloc(256);
-	config->icons_dir = malloc(256);
-	config->icons = malloc(123456); // lol come on man
+	config->icons_dir = malloc(256 * sizeof(wchar_t));
+	config->base_dir = malloc(256 * sizeof(wchar_t));
+	config->icons = malloc(123456); // uhhh
 
 	while (fgetws(line, MAX_LINE_LENGTH, file) != NULL) {
 		// remove newlines first

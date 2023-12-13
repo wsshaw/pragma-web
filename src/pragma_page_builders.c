@@ -23,7 +23,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	wchar_t *index_output = malloc(131072 * sizeof(wchar_t));
 
 	if (!index_output) {
-		wprintf(L"Error allocating memory for building index page (start_page %d)!", start_page);
+		wprintf(L"! Error allocating memory for building index page (start_page %d)!", start_page);
 		perror("malloc(): ");
 		return NULL;
 	}
@@ -255,8 +255,11 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	}
 
 	// allocate memory for output based on # of pages + header + footer + wiggle room
-	wchar_t *scroll_output = malloc(((c * 128) + wcslen(site->footer) + wcslen(site->header)) * sizeof(wchar_t));
+	wchar_t *scroll_output = malloc(((c * 256) + wcslen(site->footer) + wcslen(site->header)) * sizeof(wchar_t));
         wcscpy(scroll_output, site->header);
+
+        wcscat(scroll_output,L"<h3>View as: scroll | <a href=\"/t/\">tag index</a></h3>\n");
+
 
 	pp_page *item;
 	wchar_t *year, *link_filename, *link_date;
@@ -317,6 +320,10 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 		wcscat(scroll_output, L"</ul>\n");
 	}
 
+	wcscat(scroll_output, L"<hr>\n");
+	wcscat(scroll_output, site->footer);
+
+	// maybe put this in a function since it's more or less a verbatim retread of above
         scroll_output = replace_substring(scroll_output, L"{BACK}", L"");
         scroll_output = replace_substring(scroll_output, L"{FORWARD}", L"");
         scroll_output = replace_substring(scroll_output, L"{TITLE}", L"");
@@ -327,8 +334,159 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	return scroll_output;
 }
 
-wchar_t* build_tag_index(pp_page* pages) {
+/**
+* Build and return the tag index.  The logic here really needs to be modularized a bit better.  Improvements
+* would include decoupling the individual tag page I/O stuff from here -- it feels like a side effect of something
+* that announces its intention to simply return a string -- and revisiting the entire structure of tags in the
+* site data.  Feels a little clunky, in other words, and smells a little bit.  Very fast though.  
+*
+* add: boolean arg to trigger/skip individual tag page generation?
+*/
+wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 	if (!pages)
 		return NULL;
-	return NULL;
+
+	bool first = true;
+	struct tag_dict *tags = malloc(sizeof(tag_dict));
+	wchar_t *link_date;
+
+	tags->tag = malloc(64 * sizeof(wchar_t));
+	wcscpy(tags->tag, L"beginning");
+	tags->next = NULL;
+
+	wchar_t *tag_output = malloc(123456 * sizeof(wchar_t));
+	wcscpy(tag_output, site->header);
+
+	wcscat(tag_output, L"<h3>View as: <a href=\"/s/\">scroll</a> | tag index</h3>\n");
+
+	wcscat(tag_output, L"<h2>Tag Index</h2>\n<ul>\n");
+
+        for (pp_page *p = pages; p != NULL ; p = p->next) {
+		// FIXME: explode_tags should be changed so that it works here.
+		// copy tag list to a new string because wcstok() will modify it...
+		wchar_t *tk, *tag_temp = malloc((wcslen(p->tags) + 32) * sizeof(wchar_t));
+		wcscpy(tag_temp, p->tags);
+
+		wchar_t *t = wcstok(tag_temp, L",", &tk);
+
+		if (!t) 	
+			continue;
+
+		while (t) {
+			if (first) {
+				// avoid iterating through the list while there's just empty/garbage allocated memory in the first item
+				wcscpy(tags->tag, t);
+				first = false;
+			}
+			if (!tag_list_contains(t, tags)) {
+				append_tag(t, tags);
+			}
+			t = wcstok(NULL, L",", &tk);
+		}	
+	}
+
+	sort_tag_list(tags);
+	
+	bool in_list = false;
+
+	for (tag_dict *t = tags; t != NULL ; t = t->next) {
+		wchar_t *single_tag_index_output = malloc(65536 * sizeof(wchar_t)); //lowest-effort malloc() ever lol come on
+
+		wcscpy(single_tag_index_output, site->header);
+		wcscat(single_tag_index_output, L"<h2>Pages tagged \"");
+		wcscat(single_tag_index_output, t->tag);
+		wcscat(single_tag_index_output, L"\"</h2>\n<ul>\n");
+
+		wcscat(tag_output, L"<li><b>");
+		wcscat(tag_output, t->tag);
+		wcscat(tag_output, L"</b></li>\n");
+		for (pp_page *p = pages ; p != NULL ; p = p->next) {
+			if (page_is_tagged(p, t->tag)) {	
+				if (!in_list) {
+					wcscat(tag_output, L"<ul>\n");
+					in_list = true;
+				}
+				// really don't like the sloppiness and verbosity around generating links, and I don't just mean the
+				// hard-coded paths -- need a convenience function in general TODO
+				wcscat(single_tag_index_output, L"<li><a href=\"/c/");
+				wcscat(tag_output, L"<li><a href=\"/c/");
+				
+				wchar_t *link_filename = string_from_int(p->date_stamp);
+				wcscat(tag_output, link_filename);
+				wcscat(single_tag_index_output, link_filename);
+				free(link_filename);
+
+				wcscat(single_tag_index_output, L".html\">");
+				wcscat(tag_output, L".html\">");
+
+				wcscat(single_tag_index_output, p->title);
+				wcscat(tag_output, p->title);			
+			
+				wcscat(single_tag_index_output, L"</a> on ");	
+				wcscat(tag_output, L"</a> on ");
+			
+                                link_date = legible_date(p->date_stamp);
+                                wcscat(tag_output, link_date);
+				wcscat(single_tag_index_output, link_date);
+                                free(link_date);
+				
+				wcscat(single_tag_index_output, L"</li>\n");	
+				wcscat(tag_output, L"</li>\n");
+			}
+		}
+		if (in_list) {
+			wcscat(tag_output, L"</ul><p></p>\n");
+			in_list = false;
+		}
+		wcscat(single_tag_index_output, L"</ul>\n");
+		wcscat(single_tag_index_output, site->footer);
+
+		char *tag_destination = malloc(wcslen(site->base_dir) + 64);
+		strcpy(tag_destination, char_convert(site->base_dir));
+		strcat(tag_destination, "t/");
+		strcat(tag_destination, char_convert(t->tag));
+		strcat(tag_destination, ".html");
+		write_file_contents(tag_destination, single_tag_index_output);
+		free(tag_destination);
+		free(single_tag_index_output);
+	}
+	wcscat(tag_output, L"</ul>\n");
+	wcscat(tag_output, L"<hr>\n");
+	wcscat(tag_output, site->footer);
+	free(tags);
+
+        tag_output = replace_substring(tag_output, L"{BACK}", L"");
+        tag_output= replace_substring(tag_output, L"{FORWARD}", L"");
+        tag_output= replace_substring(tag_output, L"{TITLE}", L"");
+        tag_output= replace_substring(tag_output, L"{TAGS}", L"");
+        tag_output= replace_substring(tag_output, L"{DATE}", L"");
+        tag_output= replace_substring(tag_output, L"{PAGETITLE}", L"All posts");
+
+	return tag_output;
+}
+
+void append_tag(wchar_t *tag, tag_dict *tags) {
+	if (!tag || !tags)
+		return;
+
+	while (tags->next != NULL) {
+      		tags = tags->next;
+	}
+	
+	tags->next = malloc(sizeof(tag_dict));
+	tags->next->tag = malloc(64 * sizeof(wchar_t));
+	wcscpy(tags->next->tag, tag);
+	tags->next->next = NULL;
+}
+
+bool tag_list_contains(wchar_t *tag, tag_dict *tags) {
+	if (!tags || !tag)
+		return false;
+
+	while (tags != NULL) {
+		if (!wcscmp(tags->tag, tag))
+			return true;
+		tags = tags->next;
+	}
+	return false;
 }

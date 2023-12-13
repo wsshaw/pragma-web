@@ -9,31 +9,23 @@
 *
 * - Headings (#, ##, etc)
 * - Paragraphs (two successive line breaks)
-* - Line breaks (two or more spaces at the end of a line followed by \n, but not a "\" followed by \n)
 * - Horizontal rule (---, ***, or ___ between blank lines)
 * - Bold (**) and italic (*), plus a combination (***) of the two
-* - Underlining (_text_)
 * - Links ([Link Title](url), or [Link Title](url "Optional hover text"))
 * - Lists (1. x\n 2. y\n ... or - x\n- y\n ...), with nesting via indentation
 * - Backticks for code, `like this`
 * - Blockquotes (>)
 * - Images (![Alt text](url))
+* - Underlining (_text_)
+* - Line breaks (two or more spaces at the end of a line followed by \n, but not a "\" followed by \n)
 *
 * HTML can be included alongside the markdown.  
 */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <sys/stat.h>
-#include <malloc/malloc.h>
-#include <wchar.h>
-
 #include "pragma_poison.h"
 
 // State indicators for parsing inline/formatting elements that can span multiple lines
-int bold = 0, italic = 0, within_list = 0, block_quote = 0;
+int bold = 0, italic = 0, within_list = 0, block_quote = 0, code = 0;;
 
 void md_header(wchar_t *line, wchar_t *output) {
 	int level = 0; 
@@ -73,22 +65,20 @@ void md_escape(const wchar_t *original, wchar_t *output, size_t output_size) {
 	}
 
 	size_t original_length = wcslen(original);
-
 	output_size = output_size > original_length ? original_length * 2 : output_size - 1;
 
 	if (output_size <= original_length) {
-			wprintf(L"Output buffer size is too small.\n");
+		wprintf(L"! insufficient output buffer in md_escape()! will not escape markdown\n");
 		return;
 	}
 
 	size_t j = 0;
-
 	for (size_t i = 0; i < original_length && j < output_size - 1; i++) {
 		if (original[i] == L'\\' && i + 1 < original_length)
 			output[j++] = original[++i]; // next is literal
 		else 
 			output[j++] = original[i];
-		}
+	}
 	output[j] = L'\0';
 }
 
@@ -106,6 +96,9 @@ void md_inline(wchar_t *original, wchar_t *output) {
 				append( italic ? L"</i>" : L"<i>", output, &j );
 				italic = 1 - italic;
 			}	
+		} else if (original[i] == L'`') { // code
+			append( code ? L"</code>" : L"<code>", output, &j );
+			code = 1 - code;
 		} else if (original[i] == L'!') { // images 
 			if (i + 1 < length && original[i + 1] == L'[') {
 				// Find out bounds of the image element
@@ -232,6 +225,8 @@ wchar_t* parse_markdown(wchar_t *input) {
 		append(L"</i>", output, NULL);
 	if (block_quote)
 		append(L"</blockquote>", output, NULL);
+	if (code)
+		append(L"</code>", output, NULL);
 	return output;		  
 }
 
