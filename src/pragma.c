@@ -38,11 +38,7 @@ int main(int argc, char *argv[]) {
 	// else if we have (-c)
 	//	create new site, exit
 
-	// TODO: change the logic so that we assume
-	if (source_specified && !destination_specified) {
-	//	printf("=> Error: must specify output directory with -o\n");
-	//	exit(EXIT_SUCCESS);
-	} else if (!source_specified) {
+	if (!source_specified) {
 		printf("=> Error: must specify site directory with -s\n");
 		exit(EXIT_SUCCESS);
 	} else if (!source_specified && !create_site_specified) {
@@ -153,7 +149,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// FIXME: For testing/development purposes, all this stuff is here but it obviously needs to
-	// be moved. 
+	// be moved, or at least executed according to the user's actual preferences
 
 	// Load the site sources from the specified directory
 	pp_page* page_list = load_site( 0, SITE_SOURCES );
@@ -219,8 +215,6 @@ int main(int argc, char *argv[]) {
 		free(ds); free(d);
 		strip_terminal_newline(NULL, destination_file);
 		strcat(destination_file, ".html");
-		// Need to check the right subdirectory here
-		//wprintf(L"%ls.\n", build_single_page(current));
 		wchar_t *the_page = build_single_page(current, config);
 		write_file_contents(destination_file, the_page);
 		free(the_page);

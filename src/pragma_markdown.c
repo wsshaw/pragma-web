@@ -1,8 +1,6 @@
 /**
 * pragma_markdown - markdown parsing functions for the pragma poison generator.
 * (c) 2023 Will Shaw <will@pragmapoison.org> 
-* 
-* Made available under the MIT License
 *
 * The markdown parser is more "ad hoc" and "functional" than it is "robust" and "well-designed," but it works.
 * It supports the following Markdown elements:
@@ -101,9 +99,8 @@ void md_inline(wchar_t *original, wchar_t *output) {
 			code = 1 - code;
 		} else if (original[i] == L'!') { // images 
 			if (i + 1 < length && original[i + 1] == L'[') {
-				// Find out bounds of the image element
+				// Find out bounds of the alt text element
 				size_t start = i + 2; 
-
 				while (i + 1 < length && original[i + 1] != L']') 
 					i++;
 
@@ -118,9 +115,10 @@ void md_inline(wchar_t *original, wchar_t *output) {
 				// Skip ']('
 				i += 3;
 
-				// Find out bounds of the alt text element
+				// Find out bounds of the image url element
 				start = i;
-				while (i + 1 < length && (original[i + 1] != L')' && original[i+1] != L' ')) i++;
+				while (i + 1 < length && (original[i + 1] != L')' && original[i+1] != L' ')) 
+					i++;
 				end = i;
 
 				size_t img_url_length = end - start + 1;
@@ -129,14 +127,15 @@ void md_inline(wchar_t *original, wchar_t *output) {
 				wcsncpy(image_url, original + start, img_url_length); // was length - 1
 				image_url[img_url_length] = L'\0';
 
-				// tk support for caption 
+				// tk support for caption lol
 
 				// Construct the <img> tag
-				append(L"<img src=\"", output, &j);
+				append(L"<img class=\"post\" src=\"", output, &j);
 				append(image_url, output, &j);
 				append(L"\" alt=\"", output, &j);
 				append(alt_text, output, &j);
 				append(L"\">", output, &j);
+				++i;
 			} else {
 				output[j++] = original[i];
 			}
@@ -150,16 +149,18 @@ void md_inline(wchar_t *original, wchar_t *output) {
 }
 
 wchar_t* parse_markdown(wchar_t *input) {
+	if (!input)
+		return NULL;
+
 	wchar_t *output = malloc(wcslen(input) * 8); // lol what
 	output[0] = L'\0';
 
   	wchar_t *s, *e;
 	s = e = input;
   	s = e = (wchar_t*) input; 
-	//wprintf(L"%ls", input);
 
 	// ensure that values are reset to 0 when starting a new file
-	bold = italic = within_list = 0;
+	bold = italic = within_list = block_quote = code = 0;
 
 	// Use this instead of strtok() (or whatever its 'wide' equivalent is) because we need to keep the newlines
   	while((e = wcschr(s, L'\n'))) {
@@ -171,7 +172,7 @@ wchar_t* parse_markdown(wchar_t *input) {
 		// Get the line as parsed by strchr()
 		swprintf(line, line_length + 1, L"%.*ls", line_length, s);
 	
-		// FIXME no need to allocate this much memory 	
+		// FIXME no need to allocate this much memory. Handle errors better.	
 		wchar_t *esc = malloc(32768);
 		if (esc == NULL) { printf("malloc() failed in parsing markdown!\n"); }
 		md_escape(line, esc, 32769);
@@ -229,4 +230,3 @@ wchar_t* parse_markdown(wchar_t *input) {
 		append(L"</code>", output, NULL);
 	return output;		  
 }
-

@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <wchar.h>
 #include <time.h>
+#include <limits.h>
 #include <locale.h>
 #include <stddef.h>
 #include <time.h>

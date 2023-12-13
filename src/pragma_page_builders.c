@@ -1,12 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <sys/stat.h>
-#include <malloc/malloc.h>
-#include <wchar.h>
-#include <limits.h>
-
 #include "pragma_poison.h"
 
 /**
@@ -36,7 +27,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 			continue;
 		} 
 
-		// At this point, we're where we need to be in the list Render an index with site->index_size items 
+		// At this point, we're where we need to be in the list. Render an index with site->index_size items 
 		// on it, or as many as we have, whichever is greater.  
 		wcscat(index_output, L"<div class=\"post_head\">\n<div class=\"post_icon\">\n");
 		wcscat(index_output, L"<img class=\"icon\" alt=\"[AI-generated icon]\" src=\"/img/icons/"); //FIXME 
@@ -181,6 +172,7 @@ wchar_t* explode_tags(wchar_t* input) {
 
 	wchar_t *tkn;
 	wchar_t *t = wcstok(in, L",", &tkn);
+
 	if (!t)
 		return in;
 
@@ -256,10 +248,9 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 
 	// allocate memory for output based on # of pages + header + footer + wiggle room
 	wchar_t *scroll_output = malloc(((c * 256) + wcslen(site->footer) + wcslen(site->header)) * sizeof(wchar_t));
-        wcscpy(scroll_output, site->header);
 
-        wcscat(scroll_output,L"<h3>View as: scroll | <a href=\"/t/\">tag index</a></h3>\n");
-
+    wcscpy(scroll_output, site->header);
+	wcscat(scroll_output,L"<h3>View as: scroll | <a href=\"/t/\">tag index</a></h3>\n");
 
 	pp_page *item;
 	wchar_t *year, *link_filename, *link_date;
