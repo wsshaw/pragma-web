@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
 
 	}
 
-        if (source_specified && !destination_specified) {
+    if (source_specified && !destination_specified) {
 		pragma_output_directory = pragma_source_directory;
 		printf("=> Using default output directory %s\n", pragma_output_directory);
 		posts_output_directory = malloc(strlen(pragma_output_directory) + strlen(SITE_POSTS) + 64); //save space forfilename FIXME
@@ -166,17 +166,32 @@ int main(int argc, char *argv[]) {
 	parse_site_markdown(page_list);
 
 	// ...and build the indices
-	wchar_t *main_index = build_index(page_list, config, 0);
-	
-	// write indices to disk
-	char *index_destination = malloc(strlen(pragma_output_directory) + 20);
-	strcpy(index_destination, pragma_output_directory);
-	strcat(index_destination, "index.html");
-	write_file_contents(index_destination, main_index);
+	int num_pages = 0;
+	for (pp_page *y = page_list ; y->next != NULL ; y = y->next ) {
+		num_pages++;
+	} 
+	int num_indices = ((num_pages + 1) / config->index_size) + 1;
+	printf("=> processed %d page sources; will generate %d indices.\n", num_pages == 0 ? 0 : num_pages + 1, num_indices);
 
-	// clean up from index generation
-	free(index_destination);
-	free(main_index);
+	wchar_t *main_index;
+	char index_name[4];
+
+	for (int i = 0 ; i < num_indices ; i++ ) {
+		main_index = build_index(page_list, config, i);
+		snprintf(index_name, 4, "%d", i);
+		
+		// write indices to disk
+		char *index_destination = malloc(strlen(pragma_output_directory) + 20);
+		strcpy(index_destination, pragma_output_directory);
+		strcat(index_destination, "index");
+		strcat(index_destination, i > 0 ? index_name : ""); 
+		strcat(index_destination, ".html");
+		write_file_contents(index_destination, main_index);
+
+		// clean up from index generation
+		free(index_destination);
+		free(main_index);
+	}
 
 	// generate the scroll
 	wchar_t *main_scroll = build_scroll(page_list, config);

@@ -7,7 +7,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	if (!pages || start_page < 0)
 		return NULL;
 
-	int skipahead = start_page * site->index_size;
+	int skipahead = (start_page * site->index_size) - 1; // zero index
 	int counter = 0;
 
 	// :-D My index page will never exceed 128KB! :-D lol FIXME someday
@@ -20,6 +20,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	}
 
 	wcscpy(index_output, site->header);
+	int pages_processed = 0;
 
 	for (pp_page *current = pages; current != NULL; current = current->next) {
 		if (counter <= skipahead && skipahead != 0) { 
@@ -61,20 +62,40 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		wcscat(index_output, L"</div></div>\n<div>");
 		wcscat(index_output, current->content);
 		wcscat(index_output, L"</div><hr>\n");
-	
-		if (current->next == NULL)
-			wcscat(index_output, L"<div class=\"foot\">These are the oldest things</div>\n");
+
+		pages_processed++;
+		
+		if (pages_processed == site->index_size || current->next == NULL) {
+			wcscat(index_output, L"<div class=\"foot\">\n");
+			if (start_page > 0) {
+				wcscat(index_output, L"<a href=\"index");
+				wcscat(index_output, string_from_int(start_page - 1));
+				wcscat(index_output, L".html\">&lt; newer </a>");
+			}
+			if (current->next == NULL)
+				wcscat(index_output, L"(these are the oldest things)\n");
+			else {
+				// are there more indices coming?
+				if (start_page > 0)
+					wcscat(index_output, L" | ");
+				wcscat(index_output, L"<a href=\"index");
+				wcscat(index_output, string_from_int(start_page + 1));
+				wcscat(index_output, L".html\">older &gt;");
+			}
+			wcscat(index_output, L"</div>\n");
+			break;
+		}
 	}
 
 	wcscat(index_output, L"</div>\n");	
 	wcscat(index_output, site->footer);
 
-        // the header includes some placeholders that need to be removed -- they're mostly for single posts
-        index_output = replace_substring(index_output, L"{BACK}", L"");
-        index_output = replace_substring(index_output, L"{FORWARD}", L"");
-        index_output = replace_substring(index_output, L"{TITLE}", L"");
-        index_output = replace_substring(index_output, L"{TAGS}", L"");
-        index_output = replace_substring(index_output, L"{DATE}", L"");
+    // the header includes some placeholders that need to be removed -- they're mostly for single posts
+    index_output = replace_substring(index_output, L"{BACK}", L"");
+    index_output = replace_substring(index_output, L"{FORWARD}", L"");
+    index_output = replace_substring(index_output, L"{TITLE}", L"");
+    index_output = replace_substring(index_output, L"{TAGS}", L"");
+    index_output = replace_substring(index_output, L"{DATE}", L"");
 	index_output = replace_substring(index_output, L"{PAGETITLE}", site->site_name);
 
 	return index_output;
