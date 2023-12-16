@@ -134,7 +134,7 @@ wchar_t* read_file_contents(const char *path) {
 
 	while ((ch = fgetwc(file)) != WEOF) {
 		if (index == contentSize) {
-			// Expand the buffer if needed
+			// Expand the buffer if needed 
 			contentSize += 10; 
 			wchar_t *temp = realloc(content, contentSize * sizeof(wchar_t));
 			if (!temp) {

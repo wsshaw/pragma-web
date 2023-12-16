@@ -10,7 +10,7 @@
 * - Horizontal rule (---, ***, or ___ between blank lines)
 * - Bold (**) and italic (*), plus a combination (***) of the two
 * - Links ([Link Title](url), or [Link Title](url "Optional hover text"))
-* - Lists (1. x\n 2. y\n ... or - x\n- y\n ...), with nesting via indentation
+* - Lists (1. x\n1. y\n1. z ... or - x\n- y\n ...), with nesting via indentation
 * - Backticks for code, `like this`
 * - Blockquotes (>)
 * - Images (![Alt text](url))
@@ -23,7 +23,7 @@
 #include "pragma_poison.h"
 
 // State indicators for parsing inline/formatting elements that can span multiple lines
-int bold = 0, italic = 0, within_list = 0, block_quote = 0, code = 0;;
+int bold = 0, italic = 0, within_unordered_list = 0, within_ordered_list = 0, block_quote = 0, code = 0, underline = 0, indent_level = 0;
 
 void md_header(wchar_t *line, wchar_t *output) {
 	int level = 0; 
@@ -80,7 +80,8 @@ void md_escape(const wchar_t *original, wchar_t *output, size_t output_size) {
 	output[j] = L'\0';
 }
 
-// Parse inline elements such as **, *, etc.
+// Parse inline elements such as **, *, etc. -- elements that appear within the chunks
+// processed by parse_markdown().
 void md_inline(wchar_t *original, wchar_t *output) {
 	size_t j = 0;
 	size_t length = wcslen(original);
@@ -97,6 +98,9 @@ void md_inline(wchar_t *original, wchar_t *output) {
 		} else if (original[i] == L'`') { // code
 			append( code ? L"</code>" : L"<code>", output, &j );
 			code = 1 - code;
+		} else if (original[i] == L'_') { // underline
+			append( underline ? L"</u>" : L"<u>", output, &j);
+			underline = 1 - underline;
 		} else if (original[i] == L'!') { // images 
 			if (i + 1 < length && original[i + 1] == L'[') {
 				// Find out bounds of the alt text element
@@ -152,27 +156,34 @@ wchar_t* parse_markdown(wchar_t *input) {
 	if (!input)
 		return NULL;
 
-	wchar_t *output = malloc(wcslen(input) * 8); // lol what
+	// make some space for output. 2x input is probably a bit much.
+	wchar_t *output = malloc((wcslen(input) * 2) * sizeof(wchar_t)); 
 	output[0] = L'\0';
 
+	// placemarkers while parsing out the line
   	wchar_t *s, *e;
 	s = e = input;
   	s = e = (wchar_t*) input; 
 
-	// ensure that values are reset to 0 when starting a new file
-	bold = italic = within_list = block_quote = code = 0;
+	// ensure that state values are reset when starting a new file
+	bold = italic = within_unordered_list = block_quote = code = underline = 0;
 
-	// Use this instead of strtok() (or whatever its 'wide' equivalent is) because we need to keep the newlines
+	// Use this method instead of wcstok() because we need to keep the newlines
   	while((e = wcschr(s, L'\n'))) {
+
+		// figure out how much space we need for this line
 		int line_length = (int)(e - s + 1);
 		wchar_t *line = malloc((line_length + 1) * sizeof(wchar_t)); 	
 
-		if (line == NULL) { printf("malloc() failed to allocate space for parsing a line in parse_markdown!"); }
-
-		// Get the line as parsed by strchr()
+		if (line == NULL) { 
+			printf("malloc() failed to allocate space for parsing a line in parse_markdown!"); 
+			break;
+		}
+	
+		// get the line as displayed by printf()
 		swprintf(line, line_length + 1, L"%.*ls", line_length, s);
 	
-		// FIXME no need to allocate this much memory. Handle errors better.	
+		// allocate memory for escaping literals
 		wchar_t *esc = malloc(32768);
 		if (esc == NULL) { printf("malloc() failed in parsing markdown!\n"); }
 		md_escape(line, esc, 32769);
@@ -182,11 +193,20 @@ wchar_t* parse_markdown(wchar_t *input) {
 		md_inline(esc, fmt);
 
 		if (fmt[0] == L'#') {
+			// a line starting with # must be a heading
 			md_header(fmt, output);
 		} else if (fmt[0] == L'-' && fmt[1] == L' ') {
-			if (!within_list) {
-				within_list = 1;
-				append(L"<ul>", output, NULL); 
+			// a line beginning with "- " is an unordered list item
+			if (!within_unordered_list) {
+				within_unordered_list = 1;
+				append(L"<ul>\n", output, NULL); 
+			}
+			md_list(fmt, output);
+		} else if (iswdigit(fmt[0]) && fmt[1] == L'.') {
+			// a line beginning with "1." is an ordered list item
+			if (!within_ordered_list) {
+				within_ordered_list = 1;
+				append(L"<ol>\n", output, NULL);
 			}
 			md_list(fmt, output);
 		} else if (fmt[0] == L'>') {
@@ -198,10 +218,14 @@ wchar_t* parse_markdown(wchar_t *input) {
 		} else if ((fmt[0] == '\0') || (fmt[0] == '\n')) {
 			md_empty_line(output);
 		} else {
-			if (within_list) {
-				within_list = 0;
+			if (within_unordered_list) {
+				within_unordered_list = 0;
 				append(L"</ul>", output, NULL);
 			} 
+			if (within_ordered_list) {
+				within_ordered_list = 0;
+				append(L"</ol>\n", output, NULL);
+			}
 			if (block_quote) { 
 				block_quote = 0;
 				append(L"</blockquote>", output, NULL);
@@ -211,15 +235,18 @@ wchar_t* parse_markdown(wchar_t *input) {
 		free(esc);
 		free(fmt);
 		free(line);
-
 		s = e + 1;
 	}		
 
 	// Clean up: did we leave a list open?  Bold?  etc.
-	if (within_list) {
-		within_list = 0;
-		append(L"</ul>", output, NULL);
+	if (within_unordered_list) {
+		within_unordered_list = 0;
+		append(L"</ul>\n", output, NULL);
 	} 
+	if (within_ordered_list) {
+		within_ordered_list = 0;
+		append(L"</ol>\n", output, NULL);
+	}
 	if (bold) 
 		append(L"</em>", output, NULL);
 	if (italic) 
@@ -228,5 +255,7 @@ wchar_t* parse_markdown(wchar_t *input) {
 		append(L"</blockquote>", output, NULL);
 	if (code)
 		append(L"</code>", output, NULL);
+	if (underline)
+		append(L"</u>", output, NULL);	
 	return output;		  
 }
