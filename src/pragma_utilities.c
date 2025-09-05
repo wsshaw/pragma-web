@@ -1,5 +1,9 @@
 #include "pragma_poison.h"
 
+/**
+* Array of important directories for the software. (When you create a new site, we iterate over
+* this array and create the directories, so there's no key, like an enum of names, in header files)
+*/
 const char *pragma_directories[] = {
 	"/dat/",
 	"/img/",
@@ -9,6 +13,13 @@ const char *pragma_directories[] = {
 	"/s/"
 };
 
+/**
+* Basic configuration, JavaScript, CSS, and HTML files that must be created by the software when
+* we generate a new site. As with the above array, there's no need to address these items in a 
+* semantically legible way; we just need to make sure the files exist. 
+*
+* That said, the enum below (pragma_file_info) provides a friendly way to address the elements.
+*/
 const char *pragma_basic_files[] = {
 	"/pragma_config.yml",
 	"/pragma_last_run.yml",
@@ -19,9 +30,12 @@ const char *pragma_basic_files[] = {
 	"_footer.html"
 };
 
+/**
+* Contents of the files above, as defined in the headers -- placeholder strings or default values.
+*/
 const wchar_t *pragma_basic_file_skeletons[] = {
 	DEFAULT_YAML,
-	L"0",
+	L"0",		// default last run time: forever ago
 	DEFAULT_CSS,
 	DEFAULT_JAVASCRIPT,
 	DEFAULT_ABOUT_PAGE,
@@ -29,29 +43,62 @@ const wchar_t *pragma_basic_file_skeletons[] = {
 	DEFAULT_FOOTER
 };
 
+/**
+* A convenience enum of legible ways to refer to items in the pragma_basic_files[] array. 
+*/
 enum pragma_file_info {
 	CONFIGURATION,
 	LAST_RUN,
 	CSS,
 	JAVASCRIPT,
-	ABOUT
+	ABOUT,
+	HEADER,
+	FOOTER
 };
 
 /**
- * See if a directory exists and is readable or writable.
- * 
- * @param p The path to test.
- * @param mode Either S_IRUSR (user-readable) or S_IWUSR (user-writable)
+ * check_dir(): Verify that a directory exists and has the requested permission bit.
+ *
+ * Checks that `p` exists, is a directory, and its mode includes the specified `mode`
+ *
+ * arguments:
+ *  const char *p (path to test; must not be NULL)
+ *  int         mode (permission bit to test for, like S_IRUSR or S_IWUSR)
+ *
+ * returns:
+ *  bool (true if directory exists and has requested permission; false otherwise) 
  */
 bool check_dir( const char *p, int mode ) {
 	struct stat dir;
-	return (stat(p,&dir)==0 && S_ISDIR(dir.st_mode) && dir.st_mode & mode);
+	return (stat(p, &dir) == 0 && S_ISDIR(dir.st_mode) && dir.st_mode & mode);
 }
 
+/**
+ * usage(): Print the CLI usage string.
+ *
+ * Writes PRAGMA_USAGE (defined in headers) to stdout.
+ *
+ * arguments:
+ *  void
+ *
+ * returns:
+ *  void */
 void usage() {
 	printf("%s", PRAGMA_USAGE);
 }
 
+/**
+ * build_new_pragma_site(): Initialize a new site in the target directory.
+ *
+ * Creates required subdirectories, writes baseline config/header/footer/JS/CSS files,
+ * and reports progress to stdout. Aborts on the first failure.
+ *
+ * arguments:
+ *  char *t (absolute or working-directory-relative path to the site root; must be writable)
+ *
+ * returns:
+ *  void
+*/
 void build_new_pragma_site( char *t ) {
 	int status;
 	char path[256]; 	
@@ -72,7 +119,6 @@ void build_new_pragma_site( char *t ) {
 		status = mkdir(path, 0700);
 		if (status == 0) {
 			printf("=> Created directory %s\n", path);
-			// success: create the config file
 		} else { 
 			printf("! Error: couldn't create directory %s!\n", pragma_directories[i]);
 			perror("Aborting. The source directories for this website won't be properly configured.\n");
@@ -80,7 +126,7 @@ void build_new_pragma_site( char *t ) {
 		}
 	}
 	
-	// If we made it this far, the directories exist; create the skeleton files
+	// If we made it this far, the directories have to exist; create the skeleton files
 	for (int i = 0 ; i < (int)(sizeof(pragma_basic_files) / sizeof(pragma_basic_files[0])) ; ++i) {
 		strcpy(path,t);
 		strcat(path, pragma_basic_files[i]);
@@ -98,6 +144,18 @@ void build_new_pragma_site( char *t ) {
 	printf("Successfully created new site in %s.\n\n", t);
 }
 
+/**
+ * write_file_contents(): Write wide-character content to a file path.
+ *
+ * Opens `path` for writing (truncating if it exists) and writes `content` via fwprintf().
+ *
+ * arguments:
+ *  const char    *path    (filesystem path to write; must not be NULL)
+ *  const wchar_t *content (null-terminated wide string to write; must not be NULL)
+ *
+ * returns:
+ *  int (0 on success; -1 on error)
+ */
 int write_file_contents(const char *path, const wchar_t *content) {	
 	FILE *file = fopen(path, "w");
 
@@ -109,7 +167,7 @@ int write_file_contents(const char *path, const wchar_t *content) {
 	int written = fwprintf(file, L"%ls", content);
 	fclose(file);
 
-	if (written < 0) { // Something went wrong :(
+	if (written < 0) { // <= -1 bytes written...aka something went wrong
 		perror("! Unable to write to file in write_file_contents()!");
 		return -1;
 	}
@@ -117,8 +175,17 @@ int write_file_contents(const char *path, const wchar_t *content) {
 }
 
 /**
-* read_file_contents: Utility function to read a file and return its contents as a wchar_t pointer.
-*/
+ * read_file_contents(): Read a file into a newly allocated wide-character buffer.
+ *
+ * Reads the file as wide characters with fgetwc() and returns a heap-allocated buffer.
+ * Caller owns the returned memory and must free().
+ *
+ * arguments:
+ *  const char *path (filesystem path to read; must not be NULL)
+ *
+ * returns:
+ *  wchar_t* (heap-allocated buffer containing the file contents; NULL on error)
+ */
 wchar_t* read_file_contents(const char *path) {
 	FILE *file = fopen(path, "r");
 
@@ -145,7 +212,6 @@ wchar_t* read_file_contents(const char *path) {
 			}
 			content = temp;
 		}
-
 		content[index++] = ch;
 	}
 
@@ -169,8 +235,16 @@ wchar_t* read_file_contents(const char *path) {
 }
 
 /**
-* Figure out whether a given source directory matches the structure we expect and has a config file.
-*/
+ * is_valid_site(): Quick check that a candidate site directory is readable and exists. 
+ *
+ * Currently tests only directory existence + read bit. Future versions should validate structure
+ *
+ * arguments:
+ *  const char *path (directory to test; must not be NULL)
+ *
+ * returns:
+ *  bool (true if readable directory; false otherwise)
+ */
 bool is_valid_site(const char *path) {
 	// Can we even read the directory?
 	if (!check_dir(path,S_IRUSR))
@@ -179,13 +253,23 @@ bool is_valid_site(const char *path) {
 }
 
 /**
-* Append text (*string) to another piece of text (*result), starting at *j (if supplied).  j is mostly
-* in case a caller needs to keep track of where we are in string.
-*/
+ * append(): Append `string` to `result`, optionally tracking position via *j.
+ *
+ * Copies `string` to `result` starting at index *j (if provided) or at the
+ * current terminator (wcslen(result)). Updates *j on success.
+ *
+ * arguments:
+ *  wchar_t *string (text to append; must not be NULL)
+ *  wchar_t *result (destination buffer; must not be NULL and large enough)
+ *  size_t  *j      (optional in/out index; may be NULL)
+ *
+ * returns:
+ *  void
+ */
 void append(wchar_t *string, wchar_t *result, size_t *j) {
 	if (string == NULL || result == NULL) {
 		printf("! Invalid arguments in append(): string argument is%s null; result is%s null\n", 
-			!string ? "" : " not", !result ? "" : " not" );
+			!string ? "" : " not", !result ? "" : " not" ); 
 			return;
 	}
 
@@ -195,7 +279,7 @@ void append(wchar_t *string, wchar_t *result, size_t *j) {
 	if (start + length < start || start + length >= SIZE_MAX) {
 		printf("! buffer overflow in append()\n");
 			return;
-		}
+	}
 
 	for (size_t i = 0; i < length; i++)
 		result[start + i] = string[i];
@@ -207,9 +291,17 @@ void append(wchar_t *string, wchar_t *result, size_t *j) {
 }
 
 /**
-* get_item_by_key: given a key (timestamp) and list of page structures, find the one that matches and
-* return it.  Return NULL if no match or if the list to search is itself NULL.  
-*/
+ * get_item_by_key(): Find a page in a list by its timestamp key.
+ *
+ * Linear search over the doubly linked list for a matching `date_stamp`.
+ *
+ * arguments:
+ *  time_t   target (epoch seconds to match)
+ *  pp_page *list   (head of the page list; may be NULL)
+ *
+ * returns:
+ *  pp_page* (pointer to matching node; NULL if not found)
+ */
 pp_page* get_item_by_key(time_t target, pp_page* list) { 
 	if (!list)
 		return NULL;
@@ -220,42 +312,73 @@ pp_page* get_item_by_key(time_t target, pp_page* list) {
 }
 
 /**
-* parse_site: iterate over the list of loaded pages and call the necessary functions to parse the Markdown.
-* This overwrites the content member of the page struct, which also gets reallocated if necessary.
+ * parse_site_markdown(): Convert Markdown to HTML across all pages marked for parsing.
+ *
+ * For each page with `parsed` true, runs parse_markdown(), resizes the content buffer,
+ * and replaces the page's `content` with rendered HTML.
+ *
+ * arguments:
+ *  pp_page *page_list (head of page list; may be NULL)
+ *
+ * returns:
+ *  void
 */
 void parse_site_markdown(pp_page* page_list) {
 	for (pp_page *current = page_list; current != NULL; current = current->next) {
+		// if we have explicitly said not to parse this one as markdown, just use raw html
+		if (!current->parsed) 
+			continue;
+
 		// Parse the content with the markdown parser...
 		wchar_t *markdown_out = parse_markdown(current->content);
 
-		// ...and try to reallocate memory in a more efficient way
+		// ...and try to reallocate memory in a more efficient way...
 		wchar_t *new_content = realloc(current->content, (wcslen(markdown_out)+1) * sizeof(wchar_t));
 
-		// allocation failed
+		// ...perhaps failing... 
 		if (new_content == NULL) {
 			printf("! warning: couldn't reallocate memory for page content in parse_site()!\n");
 			free(markdown_out);
 			continue;
 		}
 
-		// adjust the content
+		// ...but, we hope, succeeding. Now replace the content with parsed output:
 		current->content = new_content;	
 		wcscpy(current->content, markdown_out);
-		free(markdown_out); // parse_markdown allocates memory but obviously does not free it before returning
+		free(markdown_out); // parse_markdown allocates memory but cannot free it before returning
 	}
 }
 
 /**
-* Merge sort utility functions -- these are used for sorting the site data structures.  Default behavior is by date,
-* descending. 
-*/
+ * merge(): Merge two sorted lists of pp_page by date_stamp (descending).
+ *
+ * Stable merge used by merge_sort(). Maintains prev/next pointers.
+ *
+ * arguments:
+ *  pp_page *left  (head of left list; may be NULL)
+ *  pp_page *right (head of right list; may be NULL)
+ *
+ * returns:
+ *  pp_page* (merged list head)
+ */
 pp_page* merge(pp_page* left, pp_page* right) {
 	return (left == NULL || right == NULL) ? (left == NULL ? right : left) :
 		(left->date_stamp >= right->date_stamp) ? 
 		(left->next = merge(left->next, right), left->next->prev = left, left->prev = NULL, left) :
-		(right->next = merge(left, right->next), right->next->prev = right, right->prev = NULL, right); // :-D
+		(right->next = merge(left, right->next), right->next->prev = right, right->prev = NULL, right); 
 }
 
+/**
+ * merge_sort(): Sort a pp_page doubly linked list by date_stamp (descending).
+ *
+ * Typical fast/slow-pointer technique and recursive merge.
+ *
+ * arguments:
+ *  pp_page *head (head of list; may be NULL)
+ *
+ * returns:
+ *  pp_page* (new head of sorted list)
+ */
 pp_page* merge_sort(pp_page* head) {
 	if (head == NULL || head->next == NULL) return head;
 
@@ -274,14 +397,32 @@ pp_page* merge_sort(pp_page* head) {
 	return merge(merge_sort(head), merge_sort(right));
 }
 
-// Convenience function to sort the site linked list in place
+/**
+ * sort_site(): Convenience wrapper to sort the site list in place.
+ *
+ * Calls merge_sort() and stores the returned head back in *head.
+ *
+ * arguments:
+ *  pp_page **head (address of list head; must not be NULL)
+ *
+ * returns:
+ *  void
+ */
 void sort_site(pp_page** head) {
 	*head = merge_sort(*head);
 }
 
 /**
-* Convert wchar_t back to a basic ASCII character string.  A convenience wrapper for wcstombs(). 
-*/
+ * char_convert(): Convert a wide-character string to a newly allocated narrow string.
+ *
+ * Uses wcstombs() to produce a UTF-8/locale-encoded char*.
+ *
+ * arguments:
+ *  const wchar_t *w (source wide string; must not be NULL)
+ *
+ * returns:
+ *  char* (heap-allocated narrow string; NULL on allocation failure)
+ */
 char* char_convert(const wchar_t* w) {
 	size_t len = wcstombs(NULL, w, 0);
 	char *out_str = malloc(len + 1);  
@@ -296,8 +437,16 @@ char* char_convert(const wchar_t* w) {
 }
 
 /**
-* Convert char to wchar_t. 
-*/
+ * wchar_convert(): Convert a narrow string to a newly allocated wide-character string.
+ *
+ * Uses mbstowcs() to produce a wchar_t*.
+ *
+ * arguments:
+ *  const char *c (source char*; must not be NULL)
+ *
+ * returns:
+ *  wchar_t* (heap-allocated wide string; NULL on error)
+ */
 wchar_t* wchar_convert(const char* c) {
 
 	size_t len = mbstowcs(NULL, c, 0);
@@ -325,14 +474,23 @@ wchar_t* wchar_convert(const char* c) {
 }
 
 /**
-* replace_substring: given str, find, and replace as arguments, do just that -- replace 'find' with 
-* 'replace' in the supplied string, using wmemcpy()/wcscpy(). 
-*/
+ * replace_substring(): Replace the first occurrence of `find` with `replace` in `str`.
+ *
+ * Allocates and returns a new buffer containing the result; original `str` is unchanged.
+ *
+ * arguments:
+ *  wchar_t       *str     (source string; must not be NULL)
+ *  const wchar_t *find    (substring to locate; must not be NULL)
+ *  const wchar_t *replace (replacement text; must not be NULL)
+ *
+ * returns:
+ *  wchar_t* (heap-allocated result; NULL on error)
+ */
 wchar_t* replace_substring(wchar_t *str, const wchar_t *find, const wchar_t *replace) {
 	if (str == NULL || find == NULL || replace == NULL)
 		return NULL;
 
-	wchar_t *pos = wcsstr(str, find); // location of substr; bail if none
+	wchar_t *pos = wcsstr(str, find); // location of requested substr; bail if none
 	if (pos == NULL)
 		return str;
 
@@ -340,17 +498,27 @@ wchar_t* replace_substring(wchar_t *str, const wchar_t *find, const wchar_t *rep
 	size_t new_string_length = wcslen(str) - wcslen(find) + wcslen(replace);
 	wchar_t *new_str = (wchar_t *)malloc((new_string_length + 1) * sizeof(wchar_t));
 
-	// build the resulting string
+	// build the resulting string and return it
 	wmemcpy(new_str, str, pos - str);
 	wmemcpy(new_str + (pos-str), replace, wcslen(replace));
 	wcscpy(new_str + (pos - str) + wcslen(replace), pos + wcslen(find));
-		return new_str;
+	return new_str;
 }
 
 /**
-* strip_terminal_newline: given either a wide character string or a regular char string (or both,
-* if you really want to), remove the last newline, but only if it's at the very end of the string.  
-*/
+ * strip_terminal_newline(): Remove a single trailing newline from a wide character string (s)
+ * and/or a narrow one (t). You can convceivably pass both arguments, and it will work fine,
+ * but either can be null. 
+ *
+ * If provided, trims the last character if it is '\n' (or L'\n' for wide string).
+ *
+ * arguments:
+ *  wchar_t *s (optional wide string to trim; may be NULL)
+ *  char    *t (optional narrow string to trim; may be NULL)
+ *
+ * returns:
+ *  void
+ */
 void strip_terminal_newline(wchar_t *s, char *t) {
 	if (!s && !t)
 		return;
@@ -373,9 +541,17 @@ void strip_terminal_newline(wchar_t *s, char *t) {
 }
 
 /**
-* legible_date: given an epoch timestamp, convert it to a legible date, e.g. "24 December 1980."
-* Allocates memory that must be freed.
-*/
+ * legible_date(): Convert an epoch timestamp to a formatted wide-character date string.
+ *
+ * Uses localtime() and wcsftime() with the format "%Y-%m-%d %H:%M:%S".
+ * Caller must free the returned buffer.
+ *
+ * arguments:
+ *  time_t when (epoch time)
+ *
+ * returns:
+ *  wchar_t* (heap-allocated date string)
+ */
 wchar_t* legible_date(time_t when) {
 	struct tm t;
 	wchar_t *output = malloc(64 * sizeof(wchar_t));
@@ -384,7 +560,15 @@ wchar_t* legible_date(time_t when) {
 	wcsftime(output, 64, L"%Y-%m-%d %H:%M:%S", &t);
 	return output;
 }
-
+/**
+ * string_from_int(): Convert a long integer to a newly allocated wide-character string.
+ * 
+ * arguments:
+ *  long int n (value to convert)
+ *
+ * returns:
+ *  wchar_t* (heap-allocated numeric string)
+ */
 wchar_t* string_from_int(long int n) {
 	int c = 0, x = n;
 
@@ -399,6 +583,20 @@ wchar_t* string_from_int(long int n) {
 	return str;
 }
 
+/**
+ * wrap_with_element(): Surround text with `start` and `close` and return a new buffer.
+ *
+ * Allocates a buffer of size len(start) + len(text) + len(close) + 1 and concatenates.
+ * Caller owns and must free.
+ *
+ * arguments:
+ *  wchar_t *text  (inner text; must not be NULL)
+ *  wchar_t *start (prefix/opening element; must not be NULL)
+ *  wchar_t *close (suffix/closing element; must not be NULL)
+ *
+ * returns:
+ *  wchar_t* (heap-allocated combined string; NULL on allocation failure)
+ */
 wchar_t* wrap_with_element(wchar_t* text, wchar_t* start, wchar_t* close) {
 	wchar_t *output = malloc(( wcslen(text) + wcslen(start) + wcslen(close) + 1 ) * sizeof(wchar_t));
 	
@@ -414,10 +612,20 @@ wchar_t* wrap_with_element(wchar_t* text, wchar_t* start, wchar_t* close) {
 	return output;
 }
 
-// TODO: change explode_tags() to generate a linked list of strings or something!
+/**
+ * page_is_tagged(): Determine whether page `p` includes tag `t` in its comma-delimited list.
+ *
+ * Tokenizes p->tags on commas and compares entries after trimming terminal newlines.
+ *
+ * arguments:
+ *  pp_page *p (page to inspect; must not be NULL)
+ *  wchar_t *t (tag to match; must not be NULL)
+ *
+ * returns:
+ *  bool (true if found; false otherwise)
+ */
 bool page_is_tagged(pp_page *p, wchar_t *t) {
 	wchar_t *in = wcsdup(p->tags);
-
 	wchar_t *tkn;
 	wchar_t *tn = wcstok(in, L",", &tkn);
 
@@ -428,10 +636,8 @@ bool page_is_tagged(pp_page *p, wchar_t *t) {
 
 	while (tn) {
 		strip_terminal_newline(tn, NULL);
-
 		if (wcscmp(t, tn) == 0)
 			return true;
-
 		tn = wcstok(NULL, L",", &tkn);
 	}
 
@@ -440,14 +646,34 @@ bool page_is_tagged(pp_page *p, wchar_t *t) {
 }
 
 /**
-* bubble sort stuff for tag list -- pretty purpose-specific I guess.
-*/
+ * swap(): Swap the tag strings stored in two tag_dict nodes.
+ *
+ * Used by bubble sort implementation for tag lists.
+ *
+ * arguments:
+ *  tag_dict *a (first node; must not be NULL)
+ *  tag_dict *b (second node; must not be NULL)
+ *
+ * returns:
+ *  void
+ */
 void swap(tag_dict *a, tag_dict *b) {
 	wchar_t *temp = a->tag;
 	a->tag = b->tag;
 	b->tag = temp;
 }
 
+/**
+ * sort_tag_list(): Bubble sort a tag_dict linked list by locale-aware comparison.
+ *
+ * Uses wcscoll() to order tags ascending; in-place re-linking via swap().
+ *
+ * arguments:
+ *  tag_dict *head (head of list; may be NULL)
+ *
+ * returns:
+ *  void
+ */
 void sort_tag_list(tag_dict *head) {
 	int swapped;
 	tag_dict *ptr;
@@ -470,3 +696,31 @@ void sort_tag_list(tag_dict *head) {
 		lptr = ptr;
 	} while (swapped);
 }
+
+/**
+ * split_before(): Copy the portion of `input` occurring before `delim` into `output`.
+ *
+ * If `delim` is not found, copies the entire input. Ensures output is null-terminated!
+ *
+ * arguments:
+ *  wchar_t       *delim  (delimiter to search for; must not be NULL)
+ *  const wchar_t *input  (input string; must not be NULL)
+ *  wchar_t       *output (destination buffer; must not be NULL and large enough)
+ *
+ * returns:
+ *  bool (true if delimiter found and split performed; false if not found)
+ */
+bool split_before(wchar_t *delim, const wchar_t *input, wchar_t *output) {
+	wchar_t *delimiter_pos = wcsstr(input, delim);
+	if (delimiter_pos != NULL) {
+		size_t length_before_delimiter = delimiter_pos - input;
+		wcsncpy(output, input, length_before_delimiter);
+		output[length_before_delimiter] = L'\0'; 
+		return true;
+	} else {
+		wcscpy(output, input);  // delimiter not found, so just return the input
+    }
+	return false;
+}
+
+

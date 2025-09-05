@@ -3,7 +3,9 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#ifdef __APPLE__
 #include <malloc/malloc.h>
+#endif
 #include <stdbool.h>
 #include <wchar.h>
 #include <time.h>
@@ -16,6 +18,7 @@
 
 // Inputs
 #define SITE_SOURCES	"/Users/will/pragma2/dat/"// Input directory - dat files to convert to HTML.  (Default value; specify actual in argv or config)
+#define SITE_SOURCES_DEFAULT_SUBDIR	"dat/"
 
 // Outputs
 #define SITE_ROOT	"/Users/will/pp2/"	// Where to stage the generated site (Default value; specify actual in argv or config)
@@ -24,8 +27,9 @@
 #define SITE_TAG_INDEX	"t/"			// Directory (within SITE_ROOT) for the indices of posts per tag
 #define SITE_IMAGES	"img/"			// Directory (within SITE_ROOT) where images are located
 #define SITE_ICONS	"img/icons/"		// Directory (within SITE_ROOT) where icons are located
+#define SITE_DEFAULT_IMG "img/default.png"	// general fallback image for the site...favico ish
                 
-#define PRAGMA_DEBUG	false;
+#define PRAGMA_DEBUG	0
 
 #define PRAGMA_USAGE	"Usage: pragma -s [source] -o [output]\n\nwhere [source] is the site source directory and [output] is where you want the rendered site.\n\n\t-f: regenerate all html for all nodes\n\t-s: dry run, status report only\n\t-u: regenerate html only for nodes whose source was modified since last successful run\n\t-n: generate html output for new nodes (i.e., created since last run)\n\t-h: show this 'help'\n\nPlease see README.txt for usage details and examples.\n\n"
 
@@ -34,20 +38,28 @@
 * to generate the files from this source rather than template files.  (The pragma executable should
 * be able to live anywhere with no supporting files)
 */
-#define DEFAULT_YAML	L"---\nsite_name:Web disaster\njs:no\nbuild_tags:yes\nbuild_scroll:yes\ncss:p.css\nheader:_header.html\nfooter:_footer.html\nindex_size:10\nicons_dir:img/icons\nbase_url:/\ntagline:Comparison is always true due to limited range of data type.\n"
+#define DEFAULT_YAML	L"---\nsite_name:Web disaster\njs:no\nbuild_tags:yes\nbuild_scroll:yes\ncss:p.css\nheader:_header.html\nfooter:_footer.html\nindex_size:10\nicons_dir:img/icons\ntagline:Comparison is always true due to limited range of data type.\nread_more:-1\ndefault_image:/img/default.png\nbase_url:https://yourdomain.edu"
 #define DEFAULT_YAML_FILENAME "pragma_config.yml"
 #define DEFAULT_CSS	L"body {\n  margin-left:10em;\n  max-width:50%;\n}\n\nh2 {\n margin-bottom:2px;\n}\n\ndiv.post_title h3 {\n  margin-bottom:2px;\n  margin-top:0px;\n}\n\n.icon {\n  float:left;\n  width:64px;\n  height:64px;\n  padding-right:10px;\n}\n\nimg.post {\n  display: block;\n  margin-left: auto;\n  margin-right: auto;\n  max-width: 75%;\n clear:both;\n}\n\ndiv.post_head {\n  display:inline-block;\n  width:100%;\n  clear:both;\n}\n\ndiv.foot {\nmargin: auto;\nwidth: 15%;\npadding-top: 1em;\nfont-size: larger;\n}\n\ndiv.post_title {\n vertical-align:top;\n float:left;\n display:inline-block;\n  overflow-wrap: break-word;\n  hyphens: auto;\n width: -webkit-calc(100% - 80px);\n  width:    -moz-calc(100% - 80px);\n  width:         calc(100% - 80px);\n}\n\ndiv.post_image_wrapper {\n  margin-left:auto;\n  margin-right:auto;\n  display:block;\n  clear:both;\n text-align:center;\n}\ndiv.post_body {\n  float:left;\n}\n\n@media only screen and (max-width: 600px) {\n  body{\n  margin-left: 1em;\n  margin-right: 1em;\n  max-width: 100%;\n  }\n  img.post {\n   display:block;\n        margin-left:auto;\n        margin-right:auto;\n        max-width:100%;\n        clear:both;\n  }\n}\nblockquote {\n  border:1px solid gray;\n  background-color:#eeeeee;\n  margin-left:5em;\n  margin-right:5em;\n  padding:1em;\n}"
 #define DEFAULT_JAVASCRIPT	L""
 #define DEFAULT_ABOUT_PAGE	L"[about page here]"
 
 #define DEFAULT_HEADER		L"<!DOCTYPE html>"\
-L"<html lang=\"en\">"\
+L"<html lang=\"en\" prefix=\"og: https://ogp.me/ns#\">"\
 L"<head>"\
 L"<meta charset=\"utf-8\">"\
 L"<meta name=\"generator\" content=\"pragma_poison_1.0.0\">"\
-L"<link rel=\"stylesheet\" href=\"/p.css\">"\
+L"<meta property=\"og:title\" content=\"{TITLE}\">"\
+L"<meta property=\"og:type\" content=\"article\">"\
+L"<meta property=\"og:locale\" content=\"en\">"\
+L"<meta property=\"og:image\" content=\"{MAIN_IMAGE}\">"\
+L"<meta property=\"og:site_name\" content=\"pragma poison\">"\
+L"<meta property=\"og:url\" content=\"{PAGE_URL}\">"\
 L"<title>#pragma poison | {PAGETITLE}</title>"\
 L"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"\
+L"<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">"\
+L"<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>"\
+L"<link href=\"https://fonts.googleapis.com/css2?family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&display=swap\" rel=\"stylesheet\">"\
 L"</head>"\
 L"<body>"\
 L"<h1>#pragma poison</h1>"\
@@ -63,7 +75,8 @@ L"{DATE}"\
 L"{TAGS}"\
 L"<p>"
 
-#define DEFAULT_FOOTER		L"</div><!-- footer here --></body></html>\n"
+#define DEFAULT_FOOTER	L"</div></body><script src=\"https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js\"></script><link href=\"https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css\" rel=\"stylesheet\"><script>const lightbox = GLightbox();</script>"\
+L"<link rel=\"stylesheet\" href=\"/p.css\"></html>"\
 
 #define LOAD_EVERYTHING		0
 #define LOAD_METADATA		1
@@ -75,11 +88,15 @@ L"<p>"
 
 #define SIZE_OF(array) ( sizeof((array)) / sizeof((array[0])) )
 
+#define READ_MORE_DELIMITER	L"#MORE"
+
 extern const char *pragma_directories[];
 extern const char *pragma_basic_files[];
 
 typedef struct site_info {
 	wchar_t *site_name;
+	wchar_t *default_image;
+	wchar_t *base_url;
 	bool include_js;
 	bool build_tags;
 	bool build_scroll;
@@ -88,6 +105,7 @@ typedef struct site_info {
 	wchar_t *header;
 	wchar_t *footer;
 	int index_size;
+	int read_more;
 	wchar_t *tagline;	
 	wchar_t *icons_dir;
 	wchar_t *base_dir;
@@ -107,6 +125,7 @@ typedef struct pp_page {
 	struct pp_page *next;
 	struct pp_page *prev;
 	wchar_t *icon;
+	bool parsed;
 } pp_page; 
 
 struct tag_dict;
@@ -157,4 +176,4 @@ bool tag_list_contains(wchar_t *tag, tag_dict *tags);
 bool page_is_tagged(pp_page* p, wchar_t *t);
 void swap(tag_dict *a, tag_dict *b);
 void sort_tag_list(tag_dict *head);
-
+bool split_before(wchar_t *delim, const wchar_t *input, wchar_t *output);

@@ -1,12 +1,28 @@
 #include "pragma_poison.h"
 
+/**
+ * main(): Entry point for the `pragma web` static site generator.
+ *
+ * Parses CLI arguments, validates source/output directories, and dispatches
+ * site-building operations. 
+ *  - Create a new site with -c
+ *  - Load site configuration and sources with -s
+ *  - Generate output into a specified directory with -o
+ *  - Building indices, scroll, tag index, and individual pages
+ *
+ * arguments:
+ *  int   argc (number of command-line arguments)
+ *  char *argv[] (array of argument strings)
+ *
+ * returns:
+ *  int (EXIT_SUCCESS or EXIT_FAILURE)
+ */
 int main(int argc, char *argv[]) {
-	// setlocale() needs to be called here so that Unicode is handled properly
+	// setlocale() needs to be called asap so that Unicode is handled properly; change as needed
 	setlocale(LC_CTYPE, "en_US.UTF-8");
 
+	// some significant locations and options we need to keep track of at startup
 	char *pragma_source_directory, *pragma_output_directory, *posts_output_directory;
-
-	// some options we need to keep track of at startup
 	bool source_specified = false;
 	bool destination_specified = false;
 	bool dry_run_specified = false;
@@ -14,10 +30,10 @@ int main(int argc, char *argv[]) {
 	bool updated_only = false;
 	bool create_site_specified = false;
 
-	// need at least some kind of argument	
+	// need at least some kind of argument because there's no default action
 	if ( argc == 1 ) {
 		usage();
-		exit(EXIT_SUCCESS);
+		exit(EXIT_FAILURE); 
 	}
 
 	for (int i = 0; i < argc; i++) {
@@ -30,20 +46,25 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Handle the arguments that govern our behavior.  The flag logic is:
+	// 
 	// We must have either (-s && -o) || (-c)
 	// if we have (-s && -o)
 	//	source and output confirmed; check mode flag and act accordingly
 	// if we have (-s || -o)
-	//	warn user that this isn't gonna work, exit
+	//	warn user that this isn't going to work because we need both, exit
 	// else if we have (-c)
 	//	create new site, exit
+	//
+	// There are libraries that can handle all of this stuff; a possible TODO would be to find one
+	// and implement it here -- I'm doing a lot of logical grunt work that could be streamlined.
+	// (The technical debt to pay down is shaped like getopts.)
 
 	if (!source_specified) {
 		printf("=> Error: must specify site directory with -s\n");
-		exit(EXIT_SUCCESS);
+		exit(EXIT_FAILURE);
 	} else if (!source_specified && !create_site_specified) {
 		printf("=> Error: must either specify source directory (-s) or create new site (-c)\n");
-		exit(EXIT_SUCCESS);
+		exit(EXIT_FAILURE);
 	}
 
 	for (int i = 0; i < argc; i++) {
@@ -60,7 +81,7 @@ int main(int argc, char *argv[]) {
 					exit(EXIT_FAILURE);
 				} else {
 					pragma_source_directory = argv[i + 1];
-							printf("=> Using source directory %s\n", pragma_source_directory); 
+					printf("=> Using source directory %s\n", pragma_source_directory); 
 					source_specified = true;
 					++i;
 				}
@@ -78,14 +99,15 @@ int main(int argc, char *argv[]) {
 					pragma_output_directory = argv[i + 1];
 					printf("=> Using output directory %s\n", pragma_output_directory);
 					destination_specified = true;
-					posts_output_directory = malloc(strlen(pragma_output_directory) + strlen(SITE_POSTS) + 64); //save space forfilename FIXME
+					posts_output_directory = malloc(strlen(pragma_output_directory) + strlen(SITE_POSTS) + 64); //save space for filename; FIXME
 					if (posts_output_directory == NULL ) {
 						printf("! Error: can't allocate memory for string representing the output path...\n");
 						exit(EXIT_FAILURE);
 					}
 					
-					// Figure out the posts directory, given the site base output dir.  Allow for trailing /, or not.
+					// Figure out the posts directory, given the site base output dir....
 					strcpy(posts_output_directory, pragma_output_directory);
+					// ...and add trailing / if it's not there.
 					strcat(posts_output_directory, pragma_output_directory[strlen(pragma_output_directory)-1] != '/' ? "/" : "");
 					strcat(posts_output_directory, SITE_POSTS);	
 					++i;
@@ -96,10 +118,11 @@ int main(int argc, char *argv[]) {
 			}
 		} else if (strcmp(argv[i], "-c") == 0) {
 			if (i > 1) {
-				printf("Not in first");
+				if (PRAGMA_DEBUG)
+					printf("=> debug => (not in first)");
 			}
 			if (i + 1 < argc) {
-				// Create a new site. We won't make a directory that doesn't exist, though.
+				// Create a new site. We won't try to make a directory that doesn't exist, though.
 				if (!check_dir(argv[i+1], S_IWUSR)) {
 					printf("=> Error: the specified directory (%s) does not exist or is not writable.\n", argv[i+1]);
 					printf("=> Please create the directory and/or adjust permissions to at least 600.\n");
@@ -113,23 +136,24 @@ int main(int argc, char *argv[]) {
 				printf("Usage: %s -c [destination directory]\n", argv[0]);
 				exit(EXIT_SUCCESS);
 			}
+		// TODO: Implement the logic for these operations (force rebuild, updated files only, dry run)
 		} else if (strcmp(argv[i], "-f") == 0) {
-		} else if (strcmp(argv[i], "-s") == 0) {
 		} else if (strcmp(argv[i], "-u") == 0) {
 		} else if (strcmp(argv[i], "-n") == 0) {
 		} else if (strcmp(argv[i], "-h") == 0) {
 			usage();
 			exit(EXIT_SUCCESS);
 		} else {
-			// :-D
+			exit(EXIT_SUCCESS); 
 		}
 
 	}
 
+	// We learned about a source but don't know where to put the output, so fall back on default.
     if (source_specified && !destination_specified) {
 		pragma_output_directory = pragma_source_directory;
 		printf("=> Using default output directory %s\n", pragma_output_directory);
-		posts_output_directory = malloc(strlen(pragma_output_directory) + strlen(SITE_POSTS) + 64); //save space forfilename FIXME
+		posts_output_directory = malloc(strlen(pragma_output_directory) + strlen(SITE_POSTS) + 64); 
 		if (posts_output_directory == NULL ) {
 			printf("! Error: can't allocate memory for string representing the output path...\n");
 			exit(EXIT_FAILURE);
@@ -141,19 +165,20 @@ int main(int argc, char *argv[]) {
 	}
 
 	site_info* config = load_site_yaml(pragma_source_directory);
-	wcscpy(config->base_dir, wchar_convert(pragma_source_directory));
-
+	
+	// If this evaluates to true, something went wrong above--no config or memory/file permission problems
 	if (config == NULL) {
 		printf("! Error: Can't proceed without site configuration! Aborting.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	// FIXME: For testing/development purposes, all this stuff is here but it obviously needs to
-	// be moved, or at least executed according to the user's actual preferences
+	wcscpy(config->base_dir, wchar_convert(pragma_source_directory));
+	wprintf(L"%s\n", config->base_dir);
 
 	// Load the site sources from the specified directory
-	pp_page* page_list = load_site( 0, SITE_SOURCES );
-	char *icons_directory = char_convert(config->icons_dir); // :(
+	printf("base: %s\n", pragma_source_directory);
+	pp_page* page_list = load_site( 0, pragma_source_directory );	
+	char *icons_directory = char_convert(config->icons_dir); 
 
 	// load the list of site icons and store them in config->site_icons; assign them
 	load_site_icons(pragma_source_directory, icons_directory, config);
@@ -221,8 +246,12 @@ int main(int argc, char *argv[]) {
 	free(tag_index);
 	
 	char *destination_file;
+
+	// We've generated a site at this point: write it to disk
 	for (pp_page *current = page_list; current != NULL; current = current->next) {
-		destination_file = malloc(256);		// i.e., find a place for the output
+
+		// First, assemble the required filename
+		destination_file = malloc(256);		
 		strcpy(destination_file, posts_output_directory);
 		wchar_t *d = string_from_int(current->date_stamp);
 		char *ds = char_convert(d);
@@ -230,13 +259,16 @@ int main(int argc, char *argv[]) {
 		free(ds); free(d);
 		strip_terminal_newline(NULL, destination_file);
 		strcat(destination_file, ".html");
+
+		// Then call build_single-page() to convert the current page to HTML...
 		wchar_t *the_page = build_single_page(current, config);
+		// ...and write the output to disk, freeing memory we had to allocate.
 		write_file_contents(destination_file, the_page);
 		free(the_page);
 		free(destination_file);
 	}
-	// clean up from site generation
 
+	// clean up from site generation
 	wprintf(L"Generated site output. Cleaning up...\n");
 	free(page_list);
 	free(posts_output_directory);
