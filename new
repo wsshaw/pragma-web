@@ -4,7 +4,9 @@ import os
 import sys
 import subprocess
 from datetime import datetime
-# uhhh
+
+# pragma-new: emit a template for a new pragma web page source and write it to disk.
+# This helper is 
 now = time.time();
 
 if ( len(sys.argv[1:] ) > 0 ):
@@ -25,18 +27,25 @@ output = """title:None
 tags:
 date:""" + str(now) + """
 ###
-Get wise"""
+Your content here (Markdown or HTML)"""
 	
 fn = str(now) + ".txt";
 
+# This scenario is pretty unlikely--that there's already a file with exactly the current epoch
+# as its name. But just in case...
 if (os.path.exists(fn)):
-        print("I'm absolutely astonished to report that",fn,"already exists.  Try again in 1ms.");
+        print("Error:",fn,"already exists.  Try again in 1ms.");
         exit();
 
 print(output, file=open(str(now) + ".txt", 'w'));
 image_dir = "../img/" + str(now);
 print("Created " + str(now) + ".txt.");
 
+# Create a directory for images associated with this post, use the 'open' command to display that
+# directory in the Finder, and open the new template file in an editor. Portability should improve.
+#
+# By default, the pramga-new helper opens vim to edit the resulting file, but the invoked executable
+# can be changed to, e.g., TextEdit, VS Code, or even emacs.
 subprocess.run(["mkdir", image_dir]);
 subprocess.run(["open", image_dir]);
 subprocess.run(["vim", fn]);
