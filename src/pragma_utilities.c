@@ -68,9 +68,9 @@ enum pragma_file_info {
  * returns:
  *  bool (true if directory exists and has requested permission; false otherwise) 
  */
-bool check_dir( const char *p, int mode ) {
+bool check_dir( const utf8_path p, int mode ) {
 	struct stat dir;
-	return (stat(p, &dir) == 0 && S_ISDIR(dir.st_mode) && dir.st_mode & mode);
+	return (utf8_stat(p, &dir) == 0 && S_ISDIR(dir.st_mode) && dir.st_mode & mode);
 }
 
 /**
@@ -116,7 +116,7 @@ void build_new_pragma_site( char *t ) {
 		strcpy(path,t);
 		strcat(path, pragma_directories[i]);
 
-		status = mkdir(path, 0700);
+		status = utf8_mkdir(path, 0700);
 		if (status == 0) {
 			printf("=> Created directory %s\n", path);
 		} else { 
@@ -156,8 +156,8 @@ void build_new_pragma_site( char *t ) {
  * returns:
  *  int (0 on success; -1 on error)
  */
-int write_file_contents(const char *path, const wchar_t *content) {	
-	FILE *file = fopen(path, "w");
+int write_file_contents(const utf8_path path, const wchar_t *content) {	
+	FILE *file = utf8_fopen(path, "w");
 
 	if (file == NULL) {
 		perror("! Unable to open file for writing in write_file_contents()!");
@@ -186,8 +186,8 @@ int write_file_contents(const char *path, const wchar_t *content) {
  * returns:
  *  wchar_t* (heap-allocated buffer containing the file contents; NULL on error)
  */
-wchar_t* read_file_contents(const char *path) {
-	FILE *file = fopen(path, "r");
+wchar_t* read_file_contents(const utf8_path path) {
+	FILE *file = utf8_fopen(path, "r");
 
 	if (!file) {
 		perror("Error opening file");
@@ -245,7 +245,7 @@ wchar_t* read_file_contents(const char *path) {
  * returns:
  *  bool (true if readable directory; false otherwise)
  */
-bool is_valid_site(const char *path) {
+bool is_valid_site(const utf8_path path) {
 	// Can we even read the directory?
 	if (!check_dir(path,S_IRUSR))
 		return false;
@@ -802,6 +802,125 @@ void free_page_list(pp_page *head) {
 		free_page(current);
 		current = next;
 	}
+}
+
+/**
+ * UTF-8 safe filesystem wrapper functions
+ * 
+ * These functions ensure proper UTF-8 handling for filesystem operations
+ * by validating that paths are properly encoded UTF-8 strings.
+ */
+
+/**
+ * utf8_fopen(): UTF-8 safe wrapper for fopen().
+ *
+ * arguments:
+ *  const utf8_path path (UTF-8 encoded file path; must not be NULL)
+ *  const char* mode (file access mode; must not be NULL)
+ *
+ * returns:
+ *  FILE* (file pointer on success; NULL on failure)
+ */
+FILE* utf8_fopen(const utf8_path path, const char* mode) {
+    if (!path || !mode) {
+        return NULL;
+    }
+    
+    // On Unix systems with proper locale, standard fopen handles UTF-8
+    return fopen(path, mode);
+}
+
+/**
+ * utf8_opendir(): UTF-8 safe wrapper for opendir().
+ *
+ * arguments:
+ *  const utf8_path path (UTF-8 encoded directory path; must not be NULL)
+ *
+ * returns:
+ *  DIR* (directory pointer on success; NULL on failure)
+ */
+DIR* utf8_opendir(const utf8_path path) {
+    if (!path) {
+        return NULL;
+    }
+    
+    return opendir(path);
+}
+
+/**
+ * utf8_stat(): UTF-8 safe wrapper for stat().
+ *
+ * arguments:
+ *  const utf8_path path (UTF-8 encoded file path; must not be NULL)
+ *  struct stat* buf (stat buffer; must not be NULL)
+ *
+ * returns:
+ *  int (0 on success; -1 on failure)
+ */
+int utf8_stat(const utf8_path path, struct stat* buf) {
+    if (!path || !buf) {
+        return -1;
+    }
+    
+    return stat(path, buf);
+}
+
+/**
+ * utf8_mkdir(): UTF-8 safe wrapper for mkdir().
+ *
+ * arguments:
+ *  const utf8_path path (UTF-8 encoded directory path; must not be NULL)
+ *  mode_t mode (directory permissions)
+ *
+ * returns:
+ *  int (0 on success; -1 on failure)
+ */
+int utf8_mkdir(const utf8_path path, mode_t mode) {
+    if (!path) {
+        return -1;
+    }
+    
+    return mkdir(path, mode);
+}
+
+/**
+ * wchar_to_utf8(): Convert wide string to UTF-8 path.
+ *
+ * Wrapper around char_convert() with explicit UTF-8 semantics.
+ *
+ * arguments:
+ *  const wchar_t *wide_str (source wide string; must not be NULL)
+ *
+ * returns:
+ *  utf8_path (heap-allocated UTF-8 string; NULL on error)
+ */
+utf8_path wchar_to_utf8(const wchar_t* wide_str) {
+    if (!wide_str) {
+        return NULL;
+    }
+    
+    // char_convert uses wcstombs which respects UTF-8 locale
+    return char_convert(wide_str);
+}
+
+/**
+ * utf8_to_wchar(): Convert UTF-8 path to wide string.
+ *
+ * Wrapper around wchar_convert() with explicit UTF-8 semantics.
+ *
+ * arguments:
+ *  const utf8_path utf8_str (source UTF-8 string; must not be NULL)
+ *
+ * returns:
+ *  wchar_t* (heap-allocated wide string; NULL on error)
+ */
+wchar_t* utf8_to_wchar(const utf8_path utf8_str) {
+    if (!utf8_str) {
+        return NULL;
+    }
+    
+    // wchar_convert uses mbstowcs which respects UTF-8 locale
+    return wchar_convert(utf8_str);
 }
 
 

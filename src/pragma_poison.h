@@ -14,6 +14,19 @@
 #include <stddef.h>
 #include <time.h>
 
+// UTF-8 string type for filesystem operations
+typedef char* utf8_path;
+
+// UTF-8 safe filesystem operations
+FILE* utf8_fopen(const utf8_path path, const char* mode);
+DIR* utf8_opendir(const utf8_path path);
+int utf8_stat(const utf8_path path, struct stat* buf);
+int utf8_mkdir(const utf8_path path, mode_t mode);
+
+// UTF-8 string conversion functions
+utf8_path wchar_to_utf8(const wchar_t* wide_str);
+wchar_t* utf8_to_wchar(const utf8_path utf8_str);
+
 #define MAX_LINE_LENGTH 4096			// ...
 
 // Inputs
@@ -140,12 +153,12 @@ enum sort_types {
 	LAST_MODIFIED
 };
 
-pp_page* parse_file(const char* filename);
-bool check_dir( const char *p, int mode );
+pp_page* parse_file(const utf8_path filename);
+bool check_dir( const utf8_path p, int mode );
 void usage();
 void build_new_pragma_site( char *t );
-wchar_t *read_file_contents(const char *path);
-int write_file_contents(const char *path, const wchar_t *content);
+wchar_t *read_file_contents(const utf8_path path);
+int write_file_contents(const utf8_path path, const wchar_t *content);
 pp_page* load_site(int operation, char* directory);
 wchar_t* parse_markdown(wchar_t *markdown);
 void append(wchar_t *string, wchar_t *result, size_t *j);
@@ -166,7 +179,7 @@ wchar_t* legible_date(time_t when);
 wchar_t* string_from_int(long int n);
 wchar_t* wrap_with_element(wchar_t* text, wchar_t* start, wchar_t* close);
 void load_site_icons(char *root, char *subdir, site_info *config);
-void directory_to_array(const char *path, char ***filenames, int *count);
+void directory_to_array(const utf8_path path, char ***filenames, int *count);
 void assign_icons(pp_page *pages, site_info *config);
 wchar_t* wchar_convert(const char* c);
 pp_page* get_item_by_key(time_t target, pp_page* list);

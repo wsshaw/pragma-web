@@ -20,7 +20,7 @@
  * returns:
  * 	pp_page* structure for the parsed file, allowing it to be rendered to the site.	
 */
-pp_page* parse_file(const char* filename) {
+pp_page* parse_file(const utf8_path filename) {
 	if (PRAGMA_DEBUG)
 		printf("parse_file() => %s\n", filename);
 	wchar_t line[MAX_LINE_LENGTH];
@@ -45,14 +45,14 @@ pp_page* parse_file(const char* filename) {
 	// Again, 32K of content is a realistic value, but there are smarter ways to do this
 	size_t content_size = 32768;
 
-	FILE* file = fopen(filename, "r");
+	FILE* file = utf8_fopen(filename, "r");
 	if (file == NULL) {
 		printf("Error opening file while trying to read %s\n", filename);
 		free_page(page);
 		return NULL;
 	}
 
-	if (stat(filename, &file_meta) != 0) {
+	if (utf8_stat(filename, &file_meta) != 0) {
 		printf("Error reading file information for %s\n", filename);
 		free_page(page);	
 		fclose(file);
@@ -152,7 +152,7 @@ site_info* load_site_yaml(char* path) {
 	strcpy(yaml, path); 
 	strcat(yaml, DEFAULT_YAML_FILENAME);
 	
-	FILE* file = fopen(yaml, "r");
+	FILE* file = utf8_fopen(yaml, "r");
 	if (file == NULL) {
 		// or bail if we can't open it at all
 		wprintf(L"! Error: can't open yaml configuration file %s!\n", yaml);
@@ -195,21 +195,29 @@ site_info* load_site_yaml(char* path) {
 		else if (wcsstr(line, L"header:") != NULL) {
 			// TODO: error handling is needed; we also need to check the header file mode;
 			// use default header/footer if the proposed header and footer are unusable
-			char* header_path = malloc(1024);
+			utf8_path header_path = malloc(1024);
 			if (!header_path)
 				config->header = NULL; 	
 			strcpy(header_path, path);
-			strcat(header_path, char_convert(line+wcslen(L"header:")));
-			wcscpy(config->header, read_file_contents(header_path));
+			utf8_path header_suffix = wchar_to_utf8(line+wcslen(L"header:"));
+			if (header_suffix) {
+				strcat(header_path, header_suffix);
+				wcscpy(config->header, read_file_contents(header_path));
+				free(header_suffix);
+			}
 			free(header_path);
 		}
 		else if (wcsstr(line, L"footer:") != NULL) {
-			char* footer_path = malloc(1024);
+			utf8_path footer_path = malloc(1024);
 			if (!footer_path)
 				config->footer = NULL;
 			strcpy(footer_path, path);
-			strcat(footer_path, char_convert(line+wcslen(L"footer:")));
-			wcscpy(config->footer, read_file_contents(footer_path));
+			utf8_path footer_suffix = wchar_to_utf8(line+wcslen(L"footer:"));
+			if (footer_suffix) {
+				strcat(footer_path, footer_suffix);
+				wcscpy(config->footer, read_file_contents(footer_path));
+				free(footer_suffix);
+			}
 			free(footer_path);
 		}
 		else if (wcsstr(line, L"read_more:") != NULL) {
@@ -274,16 +282,20 @@ pp_page* load_site( int operation, char* directory ) {
 	strcat(source_directory, SITE_SOURCES_DEFAULT_SUBDIR);
 
 	// ...and try to open it up
-	if ((dir = opendir(source_directory)) != NULL) {
+	if ((dir = utf8_opendir(source_directory)) != NULL) {
 		while ((ent = readdir(dir)) != NULL) {
 			// The new post generator (helper tool) will create files with a datestamp + .txt.  This code
 			// should be smarter about matching that format and avoiding stuff like vim swap files. 
 			if (strstr(ent->d_name, ".txt") != NULL) {
-			char filename[MAX_LINE_LENGTH];
-			// Again, this needs to use wchar_t -- my filenames are all ASCII, but it is technically fine
-			// to have a file called 🐶.txt, at least in HFS+ and other filesystems.
-			snprintf(filename, 255, "%s%s", source_directory, ent->d_name);
+			utf8_path filename = malloc(strlen(source_directory) + strlen(ent->d_name) + 1);
+			if (!filename) {
+				printf("! Error: malloc failed for filename in load_site()\n");
+				continue;
+			}
+			strcpy(filename, source_directory);
+			strcat(filename, ent->d_name);
 			struct pp_page *parsed_data = parse_file(filename);
+			free(filename);
 				if (parsed_data != NULL) {
 					parsed_data->prev = tail;
 					parsed_data->next = NULL;
@@ -379,9 +391,9 @@ void assign_icons(pp_page *pages, site_info *config) {
 *  int *count (also a value modifed in place, sentinel calculation)  
 *  
 */
-void directory_to_array(const char *path, char ***filenames, int *count) {
+void directory_to_array(const utf8_path path, char ***filenames, int *count) {
 	// Basics: can we open it?
-	DIR *dir = opendir(path);
+	DIR *dir = utf8_opendir(path);
 	if (!dir) {
 		perror("Error opening dir in directory_to_array() ");
 		return;
