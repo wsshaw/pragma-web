@@ -170,7 +170,7 @@ void md_inline(wchar_t *original, wchar_t *output) {
 	for (size_t i = 0; i < length; i++) {
 		if (original[i] == L'*' && (i + 1 < length)) {
 			if (original[i + 1] == L'*') { // bold
-				append( bold ? L"</em>" : L"<em>", output, &j );
+				append( bold ? L"</strong>" : L"<strong>", output, &j );
 				bold = 1 - bold;
 				i++;
 			} else {
@@ -354,7 +354,7 @@ wchar_t* parse_markdown(wchar_t *input) {
 		append(L"</ol>\n", output, NULL);
 	}
 	if (bold) 
-		append(L"</em>", output, NULL);
+		append(L"</strong>", output, NULL);
 	if (italic) 
 		append(L"</i>", output, NULL);
 	if (block_quote)
