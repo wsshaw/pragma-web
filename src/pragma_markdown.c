@@ -29,6 +29,86 @@
 // State indicators for parsing inline/formatting elements that can span multiple lines
 int bold = 0, italic = 0, within_unordered_list = 0, within_ordered_list = 0, block_quote = 0, code = 0, underline = 0, indent_level = 0;
 
+// Safe buffer structure for dynamic string building with overflow protection
+typedef struct {
+    wchar_t *buffer;
+    size_t size;
+    size_t used;
+} safe_buffer;
+
+/**
+ * safe_buffer_init(): Initialize a safe buffer with initial capacity.
+ *
+ * arguments:
+ *  safe_buffer *buf (buffer to initialize; must not be NULL)
+ *  size_t initial_size (initial capacity in wide characters)
+ *
+ * returns:
+ *  int (0 on success; -1 on failure)
+ */
+int safe_buffer_init(safe_buffer *buf, size_t initial_size) {
+    if (!buf || initial_size == 0)
+        return -1;
+        
+    buf->buffer = malloc(initial_size * sizeof(wchar_t));
+    if (!buf->buffer)
+        return -1;
+        
+    buf->size = initial_size;
+    buf->used = 0;
+    buf->buffer[0] = L'\0';
+    return 0;
+}
+
+/**
+ * safe_append(): Append text to a safe buffer with automatic reallocation.
+ *
+ * arguments:
+ *  const wchar_t *text (text to append; must not be NULL)
+ *  safe_buffer *buf (destination buffer; must not be NULL)
+ *
+ * returns:
+ *  int (0 on success; -1 on failure)
+ */
+int safe_append(const wchar_t *text, safe_buffer *buf) {
+    if (!text || !buf || !buf->buffer)
+        return -1;
+        
+    size_t text_len = wcslen(text);
+    if (buf->used + text_len + 1 >= buf->size) {
+        // Reallocate with 50% more space
+        size_t new_size = (buf->used + text_len + 1) * 3 / 2;
+        wchar_t *new_buffer = realloc(buf->buffer, new_size * sizeof(wchar_t));
+        if (!new_buffer)
+            return -1;
+            
+        buf->buffer = new_buffer;
+        buf->size = new_size;
+    }
+    
+    wcscpy(buf->buffer + buf->used, text);
+    buf->used += text_len;
+    return 0;
+}
+
+/**
+ * safe_buffer_free(): Free resources associated with a safe buffer.
+ *
+ * arguments:
+ *  safe_buffer *buf (buffer to free; may be NULL)
+ *
+ * returns:
+ *  void
+ */
+void safe_buffer_free(safe_buffer *buf) {
+    if (buf && buf->buffer) {
+        free(buf->buffer);
+        buf->buffer = NULL;
+        buf->size = 0;
+        buf->used = 0;
+    }
+}
+
 /*
 * md_header(): Convert a Markdown heading line (#, ##, …, ######) into an HTML <hN>.
 *
@@ -42,16 +122,17 @@ int bold = 0, italic = 0, within_unordered_list = 0, within_ordered_list = 0, bl
 * returns:
 *  void
 */
-void md_header(wchar_t *line, wchar_t *output) {
+void md_header(wchar_t *line, safe_buffer *output) {
 	int level = 0; 
 
 	// Determine which header element to use (1-6)
 	while (line[level] == L'#' && level < 6) 
 		level++;
 
-	// Hard-coded length here (line + 9) is meant to reflect the max # of wide characters added to the line
-	// e.g. <h1></h1> = 9
-	swprintf(output + wcslen(output), wcslen(line) + 9, L"<h%d>%ls</h%d>\n", level, line + level + 1, level);
+	// Build header HTML and append safely
+	wchar_t header[wcslen(line) + 32]; // Extra space for tags
+	swprintf(header, sizeof(header)/sizeof(wchar_t), L"<h%d>%ls</h%d>\n", level, line + level + 1, level);
+	safe_append(header, output);
 }
 
 /**
@@ -67,12 +148,12 @@ void md_header(wchar_t *line, wchar_t *output) {
  * returns:
  *  void
  */
-void md_paragraph(wchar_t *line, wchar_t *output) {
+void md_paragraph(wchar_t *line, safe_buffer *output) {
 	if (output == NULL) { printf("Output is null \n"); }
 	if (line == NULL) { printf("Line is null \n"); }
-	append(L"<p>", output, NULL);
-	append(line, output, NULL);
-	append(L"</p>\n", output, NULL);
+	safe_append(L"<p>", output);
+	safe_append(line, output);
+	safe_append(L"</p>\n", output);
 }
 
 /**
@@ -88,10 +169,10 @@ void md_paragraph(wchar_t *line, wchar_t *output) {
  * returns:
  *  void
  */
-void md_list(wchar_t *line, wchar_t *output) {
-	append(L"<li>", output, NULL);
-	append(line + 2, output, NULL);
-	append(L"</li>\n", output, NULL);
+void md_list(wchar_t *line, safe_buffer *output) {
+	safe_append(L"<li>", output);
+	safe_append(line + 2, output);
+	safe_append(L"</li>\n", output);
 }
 
 /**
@@ -106,8 +187,8 @@ void md_list(wchar_t *line, wchar_t *output) {
  * returns:
  *  void
  */
-void md_empty_line(wchar_t *output) {
-	append(L"<br>\n", output, NULL);
+void md_empty_line(safe_buffer *output) {
+	safe_append(L"<br>\n", output);
 }
 
 /**
@@ -164,24 +245,23 @@ void md_escape(const wchar_t *original, wchar_t *output, size_t output_size) {
  * returns:
  *  void
  */
-void md_inline(wchar_t *original, wchar_t *output) {
-	size_t j = 0;
+void md_inline(wchar_t *original, safe_buffer *output) {
 	size_t length = wcslen(original);
 	for (size_t i = 0; i < length; i++) {
 		if (original[i] == L'*' && (i + 1 < length)) {
 			if (original[i + 1] == L'*') { // bold
-				append( bold ? L"</strong>" : L"<strong>", output, &j );
+				safe_append( bold ? L"</strong>" : L"<strong>", output );
 				bold = 1 - bold;
 				i++;
 			} else {
-				append( italic ? L"</i>" : L"<i>", output, &j );
+				safe_append( italic ? L"</i>" : L"<i>", output );
 				italic = 1 - italic;
 			}	
 		} else if (original[i] == L'`') { // code
-			append( code ? L"</code>" : L"<code>", output, &j );
+			safe_append( code ? L"</code>" : L"<code>", output );
 			code = 1 - code;
 		} else if (original[i] == L'_') { // underline
-			append( underline ? L"</u>" : L"<u>", output, &j);
+			safe_append( underline ? L"</u>" : L"<u>", output);
 			underline = 1 - underline;
 		} else if (original[i] == L'!') { // images 
 			if (i + 1 < length && original[i + 1] == L'[') {
@@ -215,24 +295,23 @@ void md_inline(wchar_t *original, wchar_t *output) {
 				// tk support for caption 
 
 				// Construct the <img> tag
-				append(L"<img class=\"post\" src=\"", output, &j);
-				append(image_url, output, &j);
-				append(L"\" alt=\"", output, &j);
-				append(alt_text, output, &j);
-				append(L"\">", output, &j);
+				safe_append(L"<img class=\"post\" src=\"", output);
+				safe_append(image_url, output);
+				safe_append(L"\" alt=\"", output);
+				safe_append(alt_text, output);
+				safe_append(L"\">", output);
 				++i;
 			} else if (i + 1 < length && original[i + 1] == L'!') {
 				// gallery tk
 			} else {
-				output[j++] = original[i];
+				wchar_t single_char[2] = {original[i], L'\0'};
+				safe_append(single_char, output);
 			}
 		} else { // Doesn't seem to be an inline/formatting thing; continue
-			output[j++] = original[i];
+			wchar_t single_char[2] = {original[i], L'\0'};
+			safe_append(single_char, output);
 		}
 	} // end for loop
-
-	// wrap up the string
-	output[j] = L'\0';
 }
 
 /**
@@ -253,9 +332,11 @@ wchar_t* parse_markdown(wchar_t *input) {
 	if (!input)
 		return NULL;
 
-	// make some space for output. 2x input is probably a bit much.
-	wchar_t *output = malloc((wcslen(input) * 2) * sizeof(wchar_t)); 
-	output[0] = L'\0';
+	// Initialize safe buffer with reasonable initial capacity
+	safe_buffer output;
+	if (safe_buffer_init(&output, wcslen(input) + 1024) != 0) {
+		return NULL;
+	}
 
 	// placemarkers while parsing out the line
   	wchar_t *s, *e;
@@ -285,61 +366,66 @@ wchar_t* parse_markdown(wchar_t *input) {
 		if (esc == NULL) { printf("malloc() failed in parsing markdown!\n"); }
 		md_escape(line, esc, 32769);
 
-		wchar_t *fmt = malloc(32768);
-		if (fmt == NULL) { printf("malloc() failed in parsing markdown!\n"); }
-		md_inline(esc, fmt);
+		safe_buffer fmt;
+		if (safe_buffer_init(&fmt, 32768) != 0) {
+			printf("failed to init buffer for inline formatting!\n");
+			free(esc);
+			free(line);
+			continue;
+		}
+		md_inline(esc, &fmt);
 
-		if (fmt[0] == L'#') {
+		if (fmt.buffer[0] == L'#') {
 			// a line starting with # must be a heading
-			md_header(fmt, output);
-		} else if (fmt[0] == L'-' && fmt[1] == L' ') {
+			md_header(fmt.buffer, &output);
+		} else if (fmt.buffer[0] == L'-' && fmt.buffer[1] == L' ') {
 			// a line beginning with "- " is an unordered list item		
 			// close any previous lists (nesting = \t, not lists of lists)
 			if (within_ordered_list) {
 				within_ordered_list = 0;
-				append(L"</ol>\n", output, NULL);
+				safe_append(L"</ol>\n", &output);
 			}
 			if (!within_unordered_list) {
 				within_unordered_list = 1;
-				append(L"<ul>\n", output, NULL); 
+				safe_append(L"<ul>\n", &output); 
 			}
-			md_list(fmt, output);
-		} else if (iswdigit(fmt[0]) && fmt[1] == L'.') {
+			md_list(fmt.buffer, &output);
+		} else if (iswdigit(fmt.buffer[0]) && fmt.buffer[1] == L'.') {
 			// a line beginning with "1." (or "\d\." in general) is an ordered list item
 			if (within_unordered_list) {
 				within_unordered_list = 0;
-				append(L"</ul>\n", output, NULL);
+				safe_append(L"</ul>\n", &output);
 			}
 			if (!within_ordered_list) {
 				within_ordered_list = 1;
-				append(L"<ol>\n", output, NULL);
+				safe_append(L"<ol>\n", &output);
 			}
-			md_list(fmt, output);
-		} else if (fmt[0] == L'>') {
+			md_list(fmt.buffer, &output);
+		} else if (fmt.buffer[0] == L'>') {
 			if (!block_quote) {
 				block_quote = 1;
-				append(L"<blockquote>", output, NULL);
+				safe_append(L"<blockquote>", &output);
 			}
-			md_paragraph(fmt + 1, output);
-		} else if ((fmt[0] == '\0') || (fmt[0] == '\n')) {
-			md_empty_line(output);
+			md_paragraph(fmt.buffer + 1, &output);
+		} else if ((fmt.buffer[0] == '\0') || (fmt.buffer[0] == '\n')) {
+			md_empty_line(&output);
 		} else {
 			if (within_unordered_list) {
 				within_unordered_list = 0;
-				append(L"</ul>", output, NULL);
+				safe_append(L"</ul>", &output);
 			} 
 			if (within_ordered_list) {
 				within_ordered_list = 0;
-				append(L"</ol>\n", output, NULL);
+				safe_append(L"</ol>\n", &output);
 			}
 			if (block_quote) { 
 				block_quote = 0;
-				append(L"</blockquote>", output, NULL);
+				safe_append(L"</blockquote>", &output);
 			}
-			md_paragraph(fmt, output);
+			md_paragraph(fmt.buffer, &output);
 		}
 		free(esc);
-		free(fmt);
+		safe_buffer_free(&fmt);
 		free(line);
 		s = e + 1;
 	}		
@@ -347,21 +433,27 @@ wchar_t* parse_markdown(wchar_t *input) {
 	// Clean up: did we leave a list open?  Bold?  etc.
 	if (within_unordered_list) {
 		within_unordered_list = 0;
-		append(L"</ul>\n", output, NULL);
+		safe_append(L"</ul>\n", &output);
 	} 
 	if (within_ordered_list) {
 		within_ordered_list = 0;
-		append(L"</ol>\n", output, NULL);
+		safe_append(L"</ol>\n", &output);
 	}
 	if (bold) 
-		append(L"</strong>", output, NULL);
+		safe_append(L"</strong>", &output);
 	if (italic) 
-		append(L"</i>", output, NULL);
+		safe_append(L"</i>", &output);
 	if (block_quote)
-		append(L"</blockquote>", output, NULL);
+		safe_append(L"</blockquote>", &output);
 	if (code)
-		append(L"</code>", output, NULL);
+		safe_append(L"</code>", &output);
 	if (underline)
-		append(L"</u>", output, NULL);	
-	return output;		  
+		safe_append(L"</u>", &output);
+	
+	// Return the buffer, caller is responsible for freeing
+	wchar_t *result = output.buffer;
+	// Don't free the buffer since we're returning it
+	output.buffer = NULL;
+	safe_buffer_free(&output);
+	return result;		  
 }
