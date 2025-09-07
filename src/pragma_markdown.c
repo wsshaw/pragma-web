@@ -269,12 +269,27 @@ void md_inline(wchar_t *original, safe_buffer *output) {
 				size_t start = i + 2; 
 				while (i + 1 < length && original[i + 1] != L']') 
 					i++;
-				size_t end = i;
-				size_t img_alt_length = end - start + 1;
+				
+				// Check bounds and calculate proper length
+				if (i + 1 >= length) {
+					// Malformed image syntax, treat as literal character
+					wchar_t single_char[2] = {original[i], L'\0'};
+					safe_append(single_char, output);
+					continue;
+				}
+				
+				size_t end = i + 1;
+				size_t img_alt_length = end - start;
 
-				// Isolate alt text 
-				wchar_t alt_text[img_alt_length + 1];
-				wcsncpy(alt_text, original + start, img_alt_length); // was -1
+				// Safely allocate memory for alt text
+				wchar_t *alt_text = malloc((img_alt_length + 1) * sizeof(wchar_t));
+				if (!alt_text) {
+					// Memory allocation failed, treat as literal
+					wchar_t single_char[2] = {original[i], L'\0'};
+					safe_append(single_char, output);
+					continue;
+				}
+				wcsncpy(alt_text, original + start, img_alt_length);
 				alt_text[img_alt_length] = L'\0';
 
 				// Skip ']('
@@ -282,14 +297,29 @@ void md_inline(wchar_t *original, safe_buffer *output) {
 
 				// Find out bounds of the image url element
 				start = i;
-				while (i + 1 < length && (original[i + 1] != L')' && original[i+1] != L' ')) 
+				while (i < length && (original[i + 1] != L')' && original[i + 1] != L' ')) 
 					i++;
-				end = i;
+				
+				// Check bounds for URL
+				if (i >= length) {
+					free(alt_text);
+					wchar_t single_char[2] = {L'!', L'\0'};
+					safe_append(single_char, output);
+					continue;
+				}
+				
+				end = i + 1;
+				size_t img_url_length = end - start;
 
-				size_t img_url_length = end - start + 1;
-				wchar_t image_url[img_url_length + 1];
-
-				wcsncpy(image_url, original + start, img_url_length); // was length - 1
+				// Safely allocate memory for image URL
+				wchar_t *image_url = malloc((img_url_length + 1) * sizeof(wchar_t));
+				if (!image_url) {
+					free(alt_text);
+					wchar_t single_char[2] = {original[i], L'\0'};
+					safe_append(single_char, output);
+					continue;
+				}
+				wcsncpy(image_url, original + start, img_url_length);
 				image_url[img_url_length] = L'\0';
 
 				// tk support for caption 
@@ -300,6 +330,10 @@ void md_inline(wchar_t *original, safe_buffer *output) {
 				safe_append(L"\" alt=\"", output);
 				safe_append(alt_text, output);
 				safe_append(L"\">", output);
+				
+				// Free allocated memory
+				free(alt_text);
+				free(image_url);
 				++i;
 			} else if (i + 1 < length && original[i + 1] == L'!') {
 				// gallery tk
