@@ -177,3 +177,6 @@ bool page_is_tagged(pp_page* p, wchar_t *t);
 void swap(tag_dict *a, tag_dict *b);
 void sort_tag_list(tag_dict *head);
 bool split_before(wchar_t *delim, const wchar_t *input, wchar_t *output);
+void free_page(pp_page *page);
+void free_site_info(site_info *config);
+void free_page_list(pp_page *head);

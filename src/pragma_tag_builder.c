@@ -101,8 +101,10 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 
 		wchar_t *t = wcstok(tag_temp, L",", &tk);
 
-		if (!t) 	
+		if (!t) {
+			free(tag_temp);
 			continue;
+		}
 
 		while (t) {
 			if (first) {
@@ -114,7 +116,8 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 				append_tag(t, tags);
 			}
 			t = wcstok(NULL, L",", &tk);
-		}	
+		}
+		free(tag_temp);
 	}
 
 	sort_tag_list(tags);
@@ -196,14 +199,22 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 	wcscat(tag_output, site->footer);
 	free(tags);
 
-	tag_output = replace_substring(tag_output, L"{BACK}", L"");
-	tag_output= replace_substring(tag_output, L"{FORWARD}", L"");
-	tag_output= replace_substring(tag_output, L"{TITLE}", L"");
-	tag_output= replace_substring(tag_output, L"{TAGS}", L"");
-	tag_output= replace_substring(tag_output, L"{DATE}", L"");
-	tag_output= replace_substring(tag_output, L"{PAGETITLE}", L"All posts");
+	// Fix memory leaks by storing intermediate results and freeing them
+	wchar_t *temp1 = replace_substring(tag_output, L"{BACK}", L"");
+	free(tag_output);
+	wchar_t *temp2 = replace_substring(temp1, L"{FORWARD}", L"");
+	free(temp1);
+	wchar_t *temp3 = replace_substring(temp2, L"{TITLE}", L"");
+	free(temp2);
+	wchar_t *temp4 = replace_substring(temp3, L"{TAGS}", L"");
+	free(temp3);
+	wchar_t *temp5 = replace_substring(temp4, L"{DATE}", L"");
+	free(temp4);
+	wchar_t *temp6 = replace_substring(temp5, L"{PAGETITLE}", L"All posts");
+	free(temp5);
 	// extremely magical string
-	tag_output= replace_substring(tag_output, L"{PAGE_URL}", L"https://pragmapoison.org/t/");
+	tag_output = replace_substring(temp6, L"{PAGE_URL}", L"https://pragmapoison.org/t/");
+	free(temp6);
 
 	return tag_output;
 }

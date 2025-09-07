@@ -48,13 +48,14 @@ pp_page* parse_file(const char* filename) {
 	FILE* file = fopen(filename, "r");
 	if (file == NULL) {
 		printf("Error opening file while trying to read %s\n", filename);
-		free(page);
+		free_page(page);
 		return NULL;
 	}
 
 	if (stat(filename, &file_meta) != 0) {
 		printf("Error reading file information for %s\n", filename);
-		free(page);	
+		free_page(page);	
+		fclose(file);
 		return NULL;
 	}
 	// CAUTION: Is this portable? Works on mac OS and Linux with APFS/ext4, but it's not
@@ -64,7 +65,7 @@ pp_page* parse_file(const char* filename) {
 	if (page->content == NULL) {
 		printf("Can't allocate memory for page content while trying to read %s!\n", filename);
 		// clean things up if we run into trouble here
-		free(page);
+		free_page(page);
 		fclose(file);
 		return NULL;
 	}
@@ -116,11 +117,7 @@ pp_page* parse_file(const char* filename) {
 			if (temp == NULL) {
 				// Something's wrong with memory allocation, so get out as cleanly as we can
 				wprintf(L"! Error: can't reallocate memory to hold contents of %ls!", page->title);
-				free(page->title);
-				free(page->tags);
-				free(page->date);
-				free(page->content);
-				free(page);
+				free_page(page);
 				fclose(file);
 				return NULL;
 			}

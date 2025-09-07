@@ -270,8 +270,8 @@ int main(int argc, char *argv[]) {
 
 	// clean up from site generation
 	wprintf(L"Generated site output. Cleaning up...\n");
-	free(page_list);
+	free_page_list(page_list);
 	free(posts_output_directory);
-	free(config);
+	free_site_info(config);
 	wprintf(L"Done.\n");
 }

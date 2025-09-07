@@ -723,4 +723,85 @@ bool split_before(wchar_t *delim, const wchar_t *input, wchar_t *output) {
 	return false;
 }
 
+/**
+ * free_page(): Clean up all allocated memory for a pp_page structure.
+ *
+ * Frees all dynamically allocated members and the structure itself.
+ *
+ * arguments:
+ *  pp_page *page (page structure to free; may be NULL)
+ *
+ * returns:
+ *  void
+ */
+void free_page(pp_page *page) {
+	if (!page)
+		return;
+		
+	free(page->title);
+	free(page->tags);
+	free(page->date);
+	free(page->content);
+	free(page->icon);
+	free(page);
+}
+
+/**
+ * free_site_info(): Clean up all allocated memory for a site_info structure.
+ *
+ * Frees all dynamically allocated members, including the icons array, and the structure itself.
+ *
+ * arguments:
+ *  site_info *config (site config structure to free; may be NULL)
+ *
+ * returns:
+ *  void
+ */
+void free_site_info(site_info *config) {
+	if (!config)
+		return;
+		
+	free(config->site_name);
+	free(config->css);
+	free(config->js);
+	free(config->header);
+	free(config->base_url);
+	free(config->footer);
+	free(config->tagline);
+	free(config->default_image);
+	free(config->icons_dir);
+	free(config->base_dir);
+	
+	if (config->icons) {
+		for (int i = 0; i < config->icon_sentinel; i++) {
+			free(config->icons[i]);
+		}
+		free(config->icons);
+	}
+	
+	free(config);
+}
+
+/**
+ * free_page_list(): Clean up an entire linked list of pp_page structures.
+ *
+ * Iterates through the linked list and frees all allocated memory for each page.
+ *
+ * arguments:
+ *  pp_page *head (head of page list; may be NULL)
+ *
+ * returns:
+ *  void
+ */
+void free_page_list(pp_page *head) {
+	pp_page *current = head;
+	pp_page *next;
+	
+	while (current != NULL) {
+		next = current->next;
+		free_page(current);
+		current = next;
+	}
+}
+
 
