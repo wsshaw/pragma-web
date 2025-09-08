@@ -6,7 +6,17 @@ import subprocess
 from datetime import datetime
 
 # pragma-new: emit a template for a new pragma web page source and write it to disk.
-# This helper is 
+# 
+# By default, this helper creates a template for a post on the current date, but it
+# accepts an argument if the user would like to backdate (or future-date) a post. 
+#
+# usage: ./pragma-new [Month DD YYY HH:MM]
+#
+# example: ./pragma-new January 1 2001 15:30
+#
+# Because pragma-web works backwards from the current system time when publishing the
+# site, it will not publish future-dated posts, so they are inherently drafts until 
+# their publication time arrives. Or until someone changes the system time. 
 now = time.time();
 
 if ( len(sys.argv[1:] ) > 0 ):
