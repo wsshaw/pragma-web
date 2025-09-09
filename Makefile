@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -O4 -Wextra -std=c99 -g -fsanitize=address 
+CFLAGS = -Wall -O4 -Wextra -std=c99 -g 
 
 SRC_DIR = ./src
 OBJ_DIR = ./obj
