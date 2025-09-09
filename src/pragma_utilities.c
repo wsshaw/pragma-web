@@ -806,6 +806,50 @@ void free_page_list(pp_page *head) {
 }
 
 /**
+ * apply_common_tokens(): Apply standard token replacements to HTML output.
+ *
+ * Replaces common template tokens like {BACK}, {FORWARD}, {TITLE}, {TAGS}, etc.
+ * with appropriate values or empty strings. This centralizes the token replacement
+ * logic that was previously duplicated across multiple builder files.
+ *
+ * arguments:
+ *  wchar_t *output (HTML string to process; must not be NULL)
+ *  site_info *site (site configuration; must not be NULL)
+ *  const wchar_t *page_url (URL for this page; may be NULL for empty replacement)
+ *  const wchar_t *page_title (title for meta tags; may be NULL for site name)
+ *
+ * returns:
+ *  wchar_t* (processed HTML with tokens replaced; caller must free)
+ */
+wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title) {
+	if (!output || !site)
+		return output;
+
+	// Clear navigation tokens (used by individual posts, empty for index pages)
+	output = replace_substring(output, L"{BACK}", L"");
+	output = replace_substring(output, L"{FORWARD}", L"");
+	output = replace_substring(output, L"{TITLE}", L"");
+	output = replace_substring(output, L"{TAGS}", L"");
+	output = replace_substring(output, L"{DATE}", L"");
+	
+	// Set page metadata
+	output = replace_substring(output, L"{MAIN_IMAGE}", site->default_image);
+	output = replace_substring(output, L"{SITE_NAME}", site->site_name);
+	
+	// Page URL (if provided)
+	if (page_url) {
+		output = replace_substring(output, L"{PAGE_URL}", page_url);
+	}
+	
+	// Page title for meta tags (use page_title if provided, otherwise site name)
+	const wchar_t *meta_title = page_title ? page_title : site->site_name;
+	output = replace_substring(output, L"{TITLE_FOR_META}", meta_title);
+	output = replace_substring(output, L"{PAGETITLE}", meta_title);
+
+	return output;
+}
+
+/**
  * UTF-8 safe filesystem wrapper functions
  * 
  * These functions ensure proper UTF-8 handling for filesystem operations

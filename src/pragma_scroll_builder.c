@@ -145,17 +145,15 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	wcscat(scroll_output, L"</div>\n");
 	wcscat(scroll_output, site->footer);
 
-	// maybe put this in a function since it's more or less a verbatim retread of other code
-	scroll_output = replace_substring(scroll_output, L"{BACK}", L"");
-	scroll_output = replace_substring(scroll_output, L"{FORWARD}", L"");
-	scroll_output = replace_substring(scroll_output, L"{TITLE}", L"");
-	scroll_output = replace_substring(scroll_output, L"{TAGS}", L"");
-	scroll_output = replace_substring(scroll_output, L"{PAGE_URL}", L"https://pragmapoison.org/s/");
-	scroll_output = replace_substring(scroll_output, L"{DATE}", L"");
-	scroll_output = replace_substring(scroll_output, L"{MAIN_IMAGE}", site->default_image);
-	scroll_output = replace_substring(scroll_output, L"{SITE_NAME}", site->site_name);
-	scroll_output = replace_substring(scroll_output, L"{TITLE_FOR_META}", L"#pragma poison | all posts");
-	scroll_output = replace_substring(scroll_output, L"{PAGETITLE}", L"#pragma poison | all posts");
+	// Build scroll page URL  
+	wchar_t *scroll_url = malloc(256 * sizeof(wchar_t));
+	wcscpy(scroll_url, site->base_url);
+	wcscat(scroll_url, L"s/");
+
+	// Apply common token replacements
+	scroll_output = apply_common_tokens(scroll_output, site, scroll_url, L"#pragma poison | all posts");
+	
+	free(scroll_url);
 
 	return scroll_output;
 }

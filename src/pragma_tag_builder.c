@@ -182,14 +182,20 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 		strcat(tag_destination, char_convert(t->tag));
 		strcat(tag_destination, ".html");
 
-		// Fixme - again, need to modularize all of this
-		single_tag_index_output = replace_substring(single_tag_index_output, L"{BACK}", L"");
-        single_tag_index_output = replace_substring(single_tag_index_output, L"{FORWARD}", L"");
-        single_tag_index_output = replace_substring(single_tag_index_output, L"{TITLE}", L"");
-        single_tag_index_output = replace_substring(single_tag_index_output, L"{TAGS}", L"");
-        single_tag_index_output = replace_substring(single_tag_index_output, L"{DATE}", L"");
-        single_tag_index_output = replace_substring(single_tag_index_output, L"{SITE_NAME}", site->site_name);
-        single_tag_index_output = replace_substring(single_tag_index_output, L"{PAGETITLE}", t->tag);
+		// Build URL for this individual tag page
+		char *base_url_str = char_convert(site->base_url);
+		char *tag_str = char_convert(t->tag);
+		char *tag_url_str = malloc(256);
+		snprintf(tag_url_str, 256, "%st/%s.html", base_url_str, tag_str);
+		wchar_t *tag_url = wchar_convert(tag_url_str);
+		
+		// Apply common token replacements
+		single_tag_index_output = apply_common_tokens(single_tag_index_output, site, tag_url, t->tag);
+		
+		free(base_url_str);
+		free(tag_str);
+		free(tag_url_str);
+		free(tag_url);
 
 		write_file_contents(tag_destination, single_tag_index_output);
 		free(tag_destination);
@@ -200,24 +206,17 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 	wcscat(tag_output, site->footer);
 	free(tags);
 
-	// Fix memory leaks by storing intermediate results and freeing them
-	wchar_t *temp1 = replace_substring(tag_output, L"{BACK}", L"");
-	free(tag_output);
-	wchar_t *temp2 = replace_substring(temp1, L"{FORWARD}", L"");
-	free(temp1);
-	wchar_t *temp3 = replace_substring(temp2, L"{TITLE}", L"");
-	free(temp2);
-	wchar_t *temp4 = replace_substring(temp3, L"{TAGS}", L"");
-	free(temp3);
-	wchar_t *temp5 = replace_substring(temp4, L"{DATE}", L"");
-	free(temp4);
-	wchar_t *temp6 = replace_substring(temp5, L"{PAGETITLE}", L"All posts");
-	free(temp5);
-	wchar_t *temp7 = replace_substring(temp6, L"{SITE_NAME}", site->site_name);
-	free(temp6);
-	// extremely magical string
-	tag_output = replace_substring(temp7, L"{PAGE_URL}", L"https://pragmapoison.org/t/");
-	free(temp7);
+	// Build URL for main tag index
+	wchar_t *tag_index_url = malloc(256 * sizeof(wchar_t));
+	wcscpy(tag_index_url, site->base_url);
+	wcscat(tag_index_url, L"t/");
+
+	// Apply common token replacements (this handles memory management internally)
+	wchar_t *old_output = tag_output;
+	tag_output = apply_common_tokens(tag_output, site, tag_index_url, L"All posts");
+	free(old_output);  // Free the original since apply_common_tokens returns new memory
+	
+	free(tag_index_url);
 
 	return tag_output;
 }

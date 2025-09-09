@@ -127,24 +127,19 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	wcscat(index_output, L"</div>\n");	
 	wcscat(index_output, site->footer);
 
-	// the header includes some placeholders that need to be removed -- they're mostly for single posts
-	index_output = replace_substring(index_output, L"{BACK}", L"");
-	index_output = replace_substring(index_output, L"{FORWARD}", L"");
-	index_output = replace_substring(index_output, L"{TITLE}", L"");
-	index_output = replace_substring(index_output, L"{TAGS}", L"");
-	index_output = replace_substring(index_output, L"{DATE}", L"");
-	index_output = replace_substring(index_output, L"{MAIN_IMAGE}", site->default_image);
-	index_output = replace_substring(index_output, L"{SITE_NAME}", site->site_name);
-	index_output = replace_substring(index_output, L"{TITLE_FOR_META}", site->site_name);
-	index_output = replace_substring(index_output, L"{PAGETITLE}", site->site_name);
-
+	// Build the page URL for this index page
 	wchar_t *actual_url = malloc(256 * sizeof(wchar_t));
 	wcscpy(actual_url, site->base_url);
 	wcscat(actual_url, L"index");
-	wcscat(actual_url, start_page == 0 ? L"" : string_from_int(start_page));
+	if (start_page > 0) {
+		wchar_t *page_num = string_from_int(start_page);
+		wcscat(actual_url, page_num);
+		free(page_num);
+	}
 	wcscat(actual_url, L".html");
 
-	index_output = replace_substring(index_output, L"{PAGE_URL}", actual_url);
+	// Apply common token replacements
+	index_output = apply_common_tokens(index_output, site, actual_url, site->site_name);
 	
 	free(actual_url);
 
