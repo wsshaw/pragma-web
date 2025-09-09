@@ -23,14 +23,24 @@
 * 	wchar_t* (the HTML of the index page)
 */
 wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
-	if (!pages || start_page < 0)
+	if (!site) {
+		printf("got null site_info in build_index()! Cannot build without site info -- aborting.");
+		// todo: abort gracefully instead of just offering nullity
 		return NULL;
+	}
+	if (!pages || start_page < 0) {
+		printf("null pages or start page < 0");
+		return NULL;
+	}
 
 	int skipahead = (start_page * site->index_size) - 1; // zero index
 	int counter = 0;
 
 	// FIXME: Low priority and would break cleanly, but the index page could easily exceed 128KB. 
+	if (PRAGMA_DEBUG) printf("memory checkpint: allocating index page\n");
 	wchar_t *index_output = malloc(131072 * sizeof(wchar_t));
+	if (PRAGMA_DEBUG) printf("passed checkpoint.\n");
+	
 
 	if (!index_output) {
 		wprintf(L"! Error allocating memory for building index page (start_page %d)!", start_page);
@@ -39,11 +49,14 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	}
 
 	// insert the HTML of the site header first; initialize page counter 
+	if (PRAGMA_DEBUG) printf("memory checkpoint: copying site header to output\n");
 	wcscpy(index_output, site->header);
+	if (PRAGMA_DEBUG) printf("passed checkpoint.\n");
 	int pages_processed = 0;
 
 	// Find the right spot in the linked list:
 	for (pp_page *current = pages; current != NULL; current = current->next) {
+		if (PRAGMA_DEBUG) printf(" -> in page loop in index builder\n");
 		if (counter <= skipahead && skipahead != 0) { 
 			counter++;
 			continue;
@@ -54,31 +67,40 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		// whichever is greater.  
 		// FIXME: here and throughout, we need to abstract the HTML and not generate it directly like this,
 		// esp. with a hard-coded icon path
+		if (PRAGMA_DEBUG) printf("memory checkpoint: building post header\n");
 		wcscat(index_output, L"<div class=\"post_card\"><div class=\"post_head\">\n<div class=\"post_icon\">\n");
 		wcscat(index_output, L"<img class=\"icon\" alt=\"[icon]\" src=\"/img/icons/"); 
 		wcscat(index_output, current->icon);
 		wcscat(index_output, L"\">");
+		if (PRAGMA_DEBUG) printf("passed checkpoint\n");
 
 		// Create a link to the post (As above, TODO: insert the actual root URL of the site here and elsewhere.)
+		if (PRAGMA_DEBUG) printf("memory checkpoint: building post link\n");
 		wcscat(index_output, L"</div><div class=\"post_title\"><h3><a href=\"/c/");
 		wchar_t *link_filename = string_from_int(current->date_stamp);
 		wcscat(index_output, link_filename);
 		free(link_filename);
 		wcscat(index_output, L".html\">");
+		if (PRAGMA_DEBUG) printf("passed checkpoint\n");
 
 		// Add page data, beginning with title/date
+		if (PRAGMA_DEBUG) printf("memory checkpoint: building post title\n");
 		wcscat(index_output, current->title);
 		wcscat(index_output, L"</a></h3><i>Posted on ");
 		wchar_t *formatted_date = legible_date(current->date_stamp);
 		wcscat(index_output, formatted_date);
 		free(formatted_date);
 		wcscat(index_output, L"</i><br>\n");
+		if (PRAGMA_DEBUG) printf("passed checkpoint\n");
 
 		// Add tags
+		if (PRAGMA_DEBUG) printf("memory checkpoint: tag exploder\n");
 		wchar_t* tag_element = explode_tags(current->tags);
 		wcscat(index_output, tag_element);	
 		free(tag_element);
+		if (PRAGMA_DEBUG) printf("passed checkpoint\n");
 
+		if (PRAGMA_DEBUG) printf("memory checkpoint: adding content, looking for read-more delimiter\n");
 		wcscat(index_output, L"</div></div>\n<div class=\"post_in_index\">");
 		// content, or all the content up to the "read more" delimiter (which can appear anywhere)
 		wchar_t *clipped_content = malloc( ( wcslen(current->content) + 1 )* sizeof(wchar_t));
@@ -88,10 +110,10 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 			wcscat(clipped_content, link_filename);
 			wcscat(clipped_content, L".html\">read more &gt;&gt;</a> ]</span>");
 		}
-		free(link_filename);
 		wcscat(index_output, clipped_content);
 		free(clipped_content);
 		wcscat(index_output, L"</div></div>\n");
+		if (PRAGMA_DEBUG) printf("passed checkpoint\n");
 
 		pages_processed++;
 		
@@ -127,7 +149,17 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	wcscat(index_output, L"</div>\n");	
 	wcscat(index_output, site->footer);
 
-	// Build the page URL for this index page
+	// the header includes some placeholders that need to be removed -- they're mostly for single posts
+	index_output = replace_substring(index_output, L"{BACK}", L"");
+	index_output = replace_substring(index_output, L"{FORWARD}", L"");
+	index_output = replace_substring(index_output, L"{TITLE}", L"");
+	index_output = replace_substring(index_output, L"{TAGS}", L"");
+	index_output = replace_substring(index_output, L"{DATE}", L"");
+	index_output = replace_substring(index_output, L"{MAIN_IMAGE}", site->default_image);
+	index_output = replace_substring(index_output, L"{SITE_NAME}", site->site_name);
+	index_output = replace_substring(index_output, L"{TITLE_FOR_META}", site->site_name);
+	index_output = replace_substring(index_output, L"{PAGETITLE}", site->site_name);
+
 	wchar_t *actual_url = malloc(256 * sizeof(wchar_t));
 	wcscpy(actual_url, site->base_url);
 	wcscat(actual_url, L"index");
@@ -138,8 +170,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	}
 	wcscat(actual_url, L".html");
 
-	// Apply common token replacements
-	index_output = apply_common_tokens(index_output, site, actual_url, site->site_name);
+	index_output = replace_substring(index_output, L"{PAGE_URL}", actual_url);
 	
 	free(actual_url);
 

@@ -144,7 +144,8 @@ int main(int argc, char *argv[]) {
 			usage();
 			exit(EXIT_SUCCESS);
 		} else {
-			exit(EXIT_SUCCESS); 
+			// Skip unknown arguments (including argv[0])
+			continue;
 		}
 
 	}
@@ -202,11 +203,17 @@ int main(int argc, char *argv[]) {
 	char index_name[4];
 
 	for (int i = 0 ; i < num_indices ; i++ ) {
-		main_index = build_index(page_list, config, i);
+		printf("index build loop entered\n");
+		main_index = build_index(page_list, config, i);	
+		printf("passed build_index() call\n");
 		snprintf(index_name, 4, "%d", i);
+		printf("%s", index_name);
 		
-		// write indices to disk
+		// write indices to diskA
+		printf("allocating space for destination filename:\n");
 		char *index_destination = malloc(strlen(pragma_output_directory) + 20);
+		printf("passed malloc() for destination filename\n");
+		
 		strcpy(index_destination, pragma_output_directory);
 		strcat(index_destination, "index");
 		strcat(index_destination, i > 0 ? index_name : ""); 

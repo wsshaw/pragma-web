@@ -43,8 +43,10 @@ pp_page* parse_file(const utf8_path filename) {
 	page->static_icon = malloc(512);
 	page->parsed = true;
 	
-	// Initialize static_icon to empty string
-	wcscpy(page->static_icon, L"");
+	// Initialize static_icon to empty string (with NULL check)
+	if (page->static_icon) {
+		wcscpy(page->static_icon, L"");
+	}
 
 	// Again, 32K of content is a realistic value, but there are smarter ways to do this
 	size_t content_size = 32768;
@@ -160,11 +162,10 @@ site_info* load_site_yaml(char* path) {
 		return NULL;
 
 	char *yaml;
-	if (asprintf(&yaml, "%s%s", path, DEFAULT_YAML_FILENAME) == -1) return NULL;
-
-	// Assemble filename and open it up
-	strcpy(yaml, path); 
-	strcat(yaml, DEFAULT_YAML_FILENAME);
+	// Ensure path has trailing slash, then append config filename
+	if (asprintf(&yaml, "%s%s%s", path, 
+	             (path[strlen(path)-1] != '/') ? "/" : "", 
+	             DEFAULT_YAML_FILENAME) == -1) return NULL;
 	
 	FILE* file = utf8_fopen(yaml, "r");
 	if (file == NULL) {
@@ -210,27 +211,51 @@ site_info* load_site_yaml(char* path) {
 			// TODO: error handling is needed; we also need to check the header file mode;
 			// use default header/footer if the proposed header and footer are unusable
 			utf8_path header_path = malloc(1024);
-			if (!header_path)
-				config->header = NULL; 	
-			strcpy(header_path, path);
-			utf8_path header_suffix = wchar_to_utf8(line+wcslen(L"header:"));
-			if (header_suffix) {
-				strcat(header_path, header_suffix);
-				wcscpy(config->header, read_file_contents(header_path));
-				free(header_suffix);
+			if (!header_path) {
+				config->header = NULL;
+			} else {
+				strcpy(header_path, path);
+				// Ensure trailing slash
+				if (path[strlen(path)-1] != '/') {
+					strcat(header_path, "/");
+				}
+				utf8_path header_suffix = wchar_to_utf8(line+wcslen(L"header:"));
+				if (header_suffix) {
+					strcat(header_path, header_suffix);
+					wchar_t *header_content = read_file_contents(header_path);
+					if (header_content) {
+						wcscpy(config->header, header_content);
+						free(header_content);
+					} else {
+						wcscpy(config->header, DEFAULT_HEADER);
+					}
+					free(header_suffix);
+				}
 			}
 			free(header_path);
 		}
 		else if (wcsstr(line, L"footer:") != NULL) {
 			utf8_path footer_path = malloc(1024);
-			if (!footer_path)
+			if (!footer_path) {
 				config->footer = NULL;
-			strcpy(footer_path, path);
-			utf8_path footer_suffix = wchar_to_utf8(line+wcslen(L"footer:"));
-			if (footer_suffix) {
-				strcat(footer_path, footer_suffix);
-				wcscpy(config->footer, read_file_contents(footer_path));
-				free(footer_suffix);
+			} else {
+				strcpy(footer_path, path);
+				// Ensure trailing slash
+				if (path[strlen(path)-1] != '/') {
+					strcat(footer_path, "/");
+				}
+				utf8_path footer_suffix = wchar_to_utf8(line+wcslen(L"footer:"));
+				if (footer_suffix) {
+					strcat(footer_path, footer_suffix);
+					wchar_t *footer_content = read_file_contents(footer_path);
+					if (footer_content) {
+						wcscpy(config->footer, footer_content);
+						free(footer_content);
+					} else {
+						wcscpy(config->footer, DEFAULT_FOOTER);
+					}
+					free(footer_suffix);
+				}
 			}
 			free(footer_path);
 		}
@@ -255,6 +280,7 @@ site_info* load_site_yaml(char* path) {
 	}
 
 	fclose(file);
+	printf("passed file close in yaml parser");
 	return config;
 }
 
