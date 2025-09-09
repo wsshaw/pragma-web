@@ -183,6 +183,7 @@ void sort_site(pp_page** head);
 wchar_t* build_index(pp_page* pages, site_info *site, int start_page);
 wchar_t* build_single_page(pp_page* page, site_info *site);
 wchar_t* build_scroll(pp_page* pages, site_info *site);
+wchar_t* build_rss(pp_page* pages, site_info *site);
 void parse_site_markdown(pp_page* page_list);
 char* char_convert(const wchar_t* w);
 site_info* load_site_yaml(char* path); 

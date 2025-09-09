@@ -239,6 +239,20 @@ int main(int argc, char *argv[]) {
 	free(scroll_destination);
 	free(main_scroll);
 
+	// generate RSS feed
+	wchar_t *rss_feed = build_rss(page_list, config);
+	printf("=> Generated RSS feed.\n");
+	
+	// write RSS feed to disk (in root directory)
+	char *rss_destination = malloc(strlen(pragma_output_directory) + 20);
+	strcpy(rss_destination, pragma_output_directory);
+	strcat(rss_destination, "feed.xml");
+	write_file_contents(rss_destination, rss_feed);
+	
+	printf("=> RSS feed written successfully to disk.\n");
+	free(rss_destination);
+	free(rss_feed);
+
 	// generate tag index
 	wchar_t *tag_index = build_tag_index(page_list, config);
 	printf("=> Generated tag index.\n");
