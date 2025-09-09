@@ -164,7 +164,46 @@ int write_file_contents(const utf8_path path, const wchar_t *content) {
 		return -1; // If we aren't able to open the file, bail and return an error
 	}
 
-	int written = fwprintf(file, L"%ls", content);
+	// Convert wide characters to UTF-8 and write as bytes
+	if (PRAGMA_DEBUG) printf("Converting content to UTF-8, content length: %zu\n", wcslen(content));
+	
+	// Find where the invalid character might be
+	size_t test_len = wcstombs(NULL, content, 0);
+	if (test_len == (size_t)-1) {
+		if (PRAGMA_DEBUG) {
+			// Try to find the problematic character
+			printf("! Invalid wide character found. Scanning content...\n");
+			for (size_t i = 0; i < wcslen(content); i++) {
+				wchar_t temp[2] = {content[i], L'\0'};
+				if (wcstombs(NULL, temp, 0) == (size_t)-1) {
+					printf("! Invalid character at position %zu: U+%08X\n", i, (unsigned int)content[i]);
+					// Show context around the invalid character
+					printf("Context: ");
+					for (size_t j = (i > 10 ? i - 10 : 0); j < i + 10 && j < wcslen(content); j++) {
+						if (j == i) printf("[INVALID]");
+						else if (content[j] >= 32 && content[j] < 127) printf("%lc", content[j]);
+						else printf("?");
+					}
+					printf("\n");
+					break;
+				}
+			}
+		}
+	}
+	
+	char *utf8_content = char_convert(content);
+	if (!utf8_content) {
+		fclose(file);
+		printf("! Unable to convert content to UTF-8 in write_file_contents() for path: %s\n", path);
+		perror("char_convert failed");
+		return -1;
+	}
+	if (PRAGMA_DEBUG) printf("Converted to UTF-8, length: %zu\n", strlen(utf8_content));
+
+	//wprintf(L"%ls", content);
+
+	int written = fprintf(file, "%s", utf8_content);
+	free(utf8_content);
 	fclose(file);
 
 	if (written < 0) { // <= -1 bytes written...aka something went wrong
@@ -425,10 +464,20 @@ void sort_site(pp_page** head) {
  */
 char* char_convert(const wchar_t* w) {
 	size_t len = wcstombs(NULL, w, 0);
+	if (len == (size_t)-1) {
+		perror("! Error: invalid wide character sequence in char_convert()");
+		return NULL;
+	}
+	
 	char *out_str = malloc(len + 1);  
 
 	if (out_str != NULL) {
-		wcstombs(out_str, w, len + 1);
+		size_t result = wcstombs(out_str, w, len + 1);
+		if (result == (size_t)-1) {
+			perror("! Error: conversion failed in char_convert()");
+			free(out_str);
+			return NULL;
+		}
 		return out_str;  
 	} else {
 		printf("! Error: malloc() failed while converting string types in char_convert()!\n");
@@ -576,15 +625,29 @@ wchar_t* legible_date(time_t when) {
  *  wchar_t* (heap-allocated numeric string)
  */
 wchar_t* string_from_int(long int n) {
-	int c = 0, x = n;
-
-	while (x != 0) { 
-		x = x/10; 
-		c++;
+	int c = 0;
+	long int x = n;
+	
+	// Handle zero case properly
+	if (x == 0) {
+		c = 1;
+	} else {
+		// Handle negative numbers
+		if (x < 0) {
+			c = 1; // for the minus sign
+			x = -x;
+		}
+		
+		while (x != 0) { 
+			x = x/10; 
+			c++;
+		}
 	}
 
 	wchar_t* str = malloc((c + 1) * sizeof(wchar_t)); 
-	swprintf(str, c + 1, L"%ld", n == 0 ? 0 : n ); 
+	if (!str) return NULL;
+	
+	swprintf(str, c + 1, L"%ld", n); 
 
 	return str;
 }
