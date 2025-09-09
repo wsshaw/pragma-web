@@ -66,7 +66,7 @@ L"<meta property=\"og:title\" content=\"{TITLE}\">"\
 L"<meta property=\"og:type\" content=\"article\">"\
 L"<meta property=\"og:locale\" content=\"en\">"\
 L"<meta property=\"og:image\" content=\"{MAIN_IMAGE}\">"\
-L"<meta property=\"og:site_name\" content=\"pragma poison\">"\
+L"<meta property=\"og:site_name\" content=\"{SITE_NAME}\">"\
 L"<meta property=\"og:url\" content=\"{PAGE_URL}\">"\
 L"<title>#pragma poison | {PAGETITLE}</title>"\
 L"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"\
@@ -138,6 +138,7 @@ typedef struct pp_page {
 	struct pp_page *next;
 	struct pp_page *prev;
 	wchar_t *icon;
+	wchar_t *static_icon;
 	bool parsed;
 } pp_page; 
 

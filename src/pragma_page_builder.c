@@ -91,6 +91,7 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	page_output = replace_substring(page_output, L"{FORWARD}", (page->prev ? prev_link : L""));
 	page_output = replace_substring(page_output, L"{BACK}", (page->next ? next_link : L"")); 
 	page_output = replace_substring(page_output, L"{MAIN_IMAGE}", share_image);
+	page_output = replace_substring(page_output, L"{SITE_NAME}", site->site_name);
 	page_output = replace_substring(page_output, L"#MORE", L"");
 
 	// Free memory from string manufacturing; return page output

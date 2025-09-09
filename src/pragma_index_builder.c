@@ -134,6 +134,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	index_output = replace_substring(index_output, L"{TAGS}", L"");
 	index_output = replace_substring(index_output, L"{DATE}", L"");
 	index_output = replace_substring(index_output, L"{MAIN_IMAGE}", site->default_image);
+	index_output = replace_substring(index_output, L"{SITE_NAME}", site->site_name);
 	index_output = replace_substring(index_output, L"{TITLE_FOR_META}", site->site_name);
 	index_output = replace_substring(index_output, L"{PAGETITLE}", site->site_name);
 

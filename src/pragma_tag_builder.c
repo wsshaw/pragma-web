@@ -188,6 +188,7 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
         single_tag_index_output = replace_substring(single_tag_index_output, L"{TITLE}", L"");
         single_tag_index_output = replace_substring(single_tag_index_output, L"{TAGS}", L"");
         single_tag_index_output = replace_substring(single_tag_index_output, L"{DATE}", L"");
+        single_tag_index_output = replace_substring(single_tag_index_output, L"{SITE_NAME}", site->site_name);
         single_tag_index_output = replace_substring(single_tag_index_output, L"{PAGETITLE}", t->tag);
 
 		write_file_contents(tag_destination, single_tag_index_output);
@@ -212,9 +213,11 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 	free(temp4);
 	wchar_t *temp6 = replace_substring(temp5, L"{PAGETITLE}", L"All posts");
 	free(temp5);
-	// extremely magical string
-	tag_output = replace_substring(temp6, L"{PAGE_URL}", L"https://pragmapoison.org/t/");
+	wchar_t *temp7 = replace_substring(temp6, L"{SITE_NAME}", site->site_name);
 	free(temp6);
+	// extremely magical string
+	tag_output = replace_substring(temp7, L"{PAGE_URL}", L"https://pragmapoison.org/t/");
+	free(temp7);
 
 	return tag_output;
 }

@@ -153,6 +153,7 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	scroll_output = replace_substring(scroll_output, L"{PAGE_URL}", L"https://pragmapoison.org/s/");
 	scroll_output = replace_substring(scroll_output, L"{DATE}", L"");
 	scroll_output = replace_substring(scroll_output, L"{MAIN_IMAGE}", site->default_image);
+	scroll_output = replace_substring(scroll_output, L"{SITE_NAME}", site->site_name);
 	scroll_output = replace_substring(scroll_output, L"{TITLE_FOR_META}", L"#pragma poison | all posts");
 	scroll_output = replace_substring(scroll_output, L"{PAGETITLE}", L"#pragma poison | all posts");
 

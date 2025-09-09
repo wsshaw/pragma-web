@@ -743,6 +743,7 @@ void free_page(pp_page *page) {
 	free(page->date);
 	free(page->content);
 	free(page->icon);
+	free(page->static_icon);
 	free(page);
 }
 

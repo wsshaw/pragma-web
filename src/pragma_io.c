@@ -40,7 +40,11 @@ pp_page* parse_file(const utf8_path filename) {
 	page->date = malloc(256);
 	page->content = malloc(32768);
 	page->icon = malloc(256);
+	page->static_icon = malloc(512);
 	page->parsed = true;
+	
+	// Initialize static_icon to empty string
+	wcscpy(page->static_icon, L"");
 
 	// Again, 32K of content is a realistic value, but there are smarter ways to do this
 	size_t content_size = 32768;
@@ -85,6 +89,16 @@ pp_page* parse_file(const utf8_path filename) {
 		else if (wcsstr(line, L"date:") != NULL) {
 			wcscpy(page->date, line + wcslen(L"date:"));
 			page->date_stamp = (time_t)wcstod(page->date, NULL);
+		}
+		else if (wcsstr(line, L"static_icon:") != NULL) {
+			wcscpy(page->static_icon, line + wcslen(L"static_icon:"));
+			strip_terminal_newline(page->static_icon, NULL);
+			// Remove leading whitespace
+			wchar_t *src = page->static_icon;
+			while (*src == L' ' || *src == L'\t') src++;
+			if (src != page->static_icon) {
+				wmemmove(page->static_icon, src, wcslen(src) + 1);
+			}
 		}
 		else if (wcsstr(line, L"parse:") != NULL) {
     		const wchar_t *value_start = line + wcslen(L"parse:");
@@ -371,11 +385,41 @@ void assign_icons(pp_page *pages, site_info *config) {
 		return;
 	}
 
-	// assign the icons to each page in the linked list, choosing randomly from config->icons[]
+	// assign the icons to each page in the linked list
 	for (pp_page *current = pages; current != NULL; current = current->next) {
-		wchar_t *the_icon = wchar_convert(config->icons[ rand() % config->icon_sentinel ]);
-		wcscpy(current->icon, the_icon);
-		free(the_icon);
+		bool used_static_icon = false;
+		
+		// Check if page has a static_icon specified and if file exists
+		if (wcslen(current->static_icon) > 0) {
+			// Build full path to static icon (relative to site root)
+			char *static_icon_path = malloc(512);
+			char *base_dir = char_convert(config->base_dir);
+			char *static_icon_str = char_convert(current->static_icon);
+			
+			snprintf(static_icon_path, 512, "%s%s", base_dir, static_icon_str);
+			
+			// Check if file exists and is readable
+			struct stat stat_buf;
+			if (stat(static_icon_path, &stat_buf) == 0 && S_ISREG(stat_buf.st_mode)) {
+				// File exists and is a regular file - use the static icon path
+				wcscpy(current->icon, current->static_icon);
+				used_static_icon = true;
+			} else {
+				printf("! Warning: static_icon '%s' not found or unreadable for post '%ls', using random icon\n", 
+					   static_icon_path, current->title);
+			}
+			
+			free(static_icon_path);
+			free(base_dir);
+			free(static_icon_str);
+		}
+		
+		// If no static icon or file doesn't exist, use random icon
+		if (!used_static_icon) {
+			wchar_t *the_icon = wchar_convert(config->icons[ rand() % config->icon_sentinel ]);
+			wcscpy(current->icon, the_icon);
+			free(the_icon);
+		}
 	}
 }
 
