@@ -24,7 +24,8 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 		return NULL;
 
 	// figure out where this page lives in the world
-    wchar_t *link_filename = string_from_int(page->date_stamp);
+	//also, FIXME: smells that we just use this as is; string_from_int() can return null
+	wchar_t *link_filename = string_from_int(page->date_stamp);	
 	wchar_t *page_url = malloc(512 * sizeof(wchar_t));
 
 	wcscpy(page_url, site->base_url);

@@ -75,7 +75,7 @@ L"blockquote {\n  border:1px solid gray;\n  background-color:#eeeeee;\n  margin-
 L"<html lang=\"en\" prefix=\"og: https://ogp.me/ns#\">"\
 L"<head>"\
 L"<meta charset=\"utf-8\">"\
-L"<meta name=\"generator\" content=\"pragma_poison_1.0.0\">"\
+L"<meta name=\"generator\" content=\"pragma-web_1.0.0\">"\
 L"<meta property=\"og:title\" content=\"{TITLE}\">"\
 L"<meta property=\"og:type\" content=\"article\">"\
 L"<meta property=\"og:locale\" content=\"en\">"\

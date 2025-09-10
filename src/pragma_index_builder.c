@@ -258,7 +258,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	}
 
 	if (PRAGMA_DEBUG) printf("DEBUG: Before final </div>, length = %zu\n", wcslen(index_output));
-	wcscat(index_output, L"</div>\n");
+	//wcscat(index_output, L"</div>\n");
 	if (PRAGMA_DEBUG) printf("DEBUG: After final </div>, length = %zu\n", wcslen(index_output));
 	
 	// Check for corruption after </div>
