@@ -110,6 +110,7 @@ L"<link rel=\"stylesheet\" href=\"/p.css\"></html>"\
 #define LOAD_EVERYTHING		0
 #define LOAD_METADATA		1
 #define LOAD_FILENAMES_ONLY	2
+#define LOAD_UPDATED_ONLY	3
 
 #define MAX_MONTHLY_POSTS	128
 
@@ -177,7 +178,7 @@ void usage();
 void build_new_pragma_site( char *t );
 wchar_t *read_file_contents(const utf8_path path);
 int write_file_contents(const utf8_path path, const wchar_t *content);
-pp_page* load_site(int operation, char* directory);
+pp_page* load_site(int operation, char* directory, time_t since_time);
 wchar_t* parse_markdown(wchar_t *markdown);
 void append(wchar_t *string, wchar_t *result, size_t *j);
 pp_page* merge(pp_page* list1, pp_page* list2);
@@ -212,6 +213,8 @@ bool split_before(wchar_t *delim, const wchar_t *input, wchar_t *output);
 wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title);
 wchar_t* strip_html_tags(const wchar_t *input);
 wchar_t* get_page_description(pp_page *page);
+time_t get_last_run_time(const char *site_directory);
+void update_last_run_time(const char *site_directory);
 void free_page(pp_page *page);
 void free_site_info(site_info *config);
 void free_page_list(pp_page *head);

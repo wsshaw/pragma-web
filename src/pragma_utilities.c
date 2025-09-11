@@ -1159,4 +1159,91 @@ wchar_t* get_page_description(pp_page *page) {
     return result;
 }
 
+/**
+ * get_last_run_time(): Read the last successful run timestamp from pragma_last_run.yml
+ *
+ * Reads the timestamp from the pragma_last_run.yml file in the site directory.
+ * Returns 0 if the file doesn't exist or can't be read (meaning never run before).
+ *
+ * arguments:
+ *  const char *site_directory (site root directory; must not be NULL)
+ *
+ * returns:
+ *  time_t (last run timestamp, or 0 if never run/error)
+ */
+time_t get_last_run_time(const char *site_directory) {
+    if (!site_directory) {
+        return 0;
+    }
+    
+    char *last_run_path = malloc(strlen(site_directory) + 32);
+    if (!last_run_path) {
+        return 0;
+    }
+    
+    strcpy(last_run_path, site_directory);
+    if (site_directory[strlen(site_directory)-1] != '/') {
+        strcat(last_run_path, "/");
+    }
+    strcat(last_run_path, "pragma_last_run.yml");
+    
+    FILE *file = utf8_fopen(last_run_path, "r");
+    free(last_run_path);
+    
+    if (!file) {
+        return 0; // File doesn't exist, treat as never run
+    }
+    
+    char line[256];
+    time_t last_run = 0;
+    
+    if (fgets(line, sizeof(line), file)) {
+        // Parse the timestamp from the file
+        last_run = (time_t)strtol(line, NULL, 10);
+    }
+    
+    fclose(file);
+    return last_run;
+}
+
+/**
+ * update_last_run_time(): Write the current timestamp to pragma_last_run.yml
+ *
+ * Updates the pragma_last_run.yml file with the current timestamp to mark
+ * a successful site generation run.
+ *
+ * arguments:
+ *  const char *site_directory (site root directory; must not be NULL)
+ *
+ * returns:
+ *  void
+ */
+void update_last_run_time(const char *site_directory) {
+    if (!site_directory) {
+        return;
+    }
+    
+    char *last_run_path = malloc(strlen(site_directory) + 32);
+    if (!last_run_path) {
+        return;
+    }
+    
+    strcpy(last_run_path, site_directory);
+    if (site_directory[strlen(site_directory)-1] != '/') {
+        strcat(last_run_path, "/");
+    }
+    strcat(last_run_path, "pragma_last_run.yml");
+    
+    FILE *file = utf8_fopen(last_run_path, "w");
+    free(last_run_path);
+    
+    if (!file) {
+        return; // Can't write, silently fail
+    }
+    
+    time_t now = time(NULL);
+    fprintf(file, "%ld\n", (long)now);
+    fclose(file);
+}
+
 

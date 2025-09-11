@@ -24,7 +24,7 @@
  *  observed min/max year range and initialized to -1 for empty slots
  */
 wchar_t* build_scroll(pp_page* pages, site_info* site) {
-	if (!pages) 
+	if (!site) 
 		return NULL;
 
 	// Figure out the high/low year bounds. Using tm_info structure from localtime().
@@ -40,6 +40,27 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 		max = actual_year > max ? actual_year : max;
 
 		++c;
+	}
+
+	// If no pages were found, return an empty scroll page
+	if (c == 0) {
+		wchar_t *empty_scroll = malloc((wcslen(site->footer) + wcslen(site->header) + 256) * sizeof(wchar_t));
+		wcscpy(empty_scroll, site->header);
+		wcscat(empty_scroll, L"<div class=\"post_card\"><h3>View as: scroll | <a href=\"/t/\">tag index</a></h3>\n");
+		wcscat(empty_scroll, L"<p>No posts found.</p>\n");
+		wcscat(empty_scroll, L"</div>\n");
+		wcscat(empty_scroll, site->footer);
+		
+		// Build scroll page URL  
+		wchar_t *scroll_url = malloc(256 * sizeof(wchar_t));
+		wcscpy(scroll_url, site->base_url);
+		wcscat(scroll_url, L"s/");
+		
+		// Apply common token replacements
+		empty_scroll = apply_common_tokens(empty_scroll, site, scroll_url, L"#pragma poison | all posts");
+		
+		free(scroll_url);
+		return empty_scroll;
 	}
 
 	// We use a straightforward array structure instead of, say, ***datestamp_list 

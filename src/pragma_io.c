@@ -309,13 +309,14 @@ site_info* load_site_yaml(char* path) {
  * handling errors in a consistent and actionable way (use a stable log output format).
  * 
  * 	arguments:
- * 	 int operation (not used: future support for loading modes)
+ * 	 int operation (loading mode: LOAD_EVERYTHING, LOAD_UPDATED_ONLY, etc.)
  * 	 char* directory (the *root* path of a pragma site, *not* just the dat/ sources)
+ *   time_t since_time (for LOAD_UPDATED_ONLY: only load files modified after this time)
  * 
  * returns:
  * 	pp_page* (pointer to a page, i.e., a linked list of pages)
  */
-pp_page* load_site( int operation, char* directory ) {
+pp_page* load_site( int operation, char* directory, time_t since_time ) {
 	// Setup: prepare the linked list elements and directory info variables
 	DIR *dir;	   
 	struct dirent *ent;
@@ -350,6 +351,19 @@ pp_page* load_site( int operation, char* directory ) {
 			}
 			strcpy(filename, source_directory);
 			strcat(filename, ent->d_name);
+			
+			// If we're only loading updated files, check modification time
+			if (operation == LOAD_UPDATED_ONLY && since_time > 0) {
+				struct stat file_stat;
+				if (utf8_stat(filename, &file_stat) == 0) {
+					// Skip files that haven't been modified since the last run
+					if (file_stat.st_mtime <= since_time) {
+						free(filename);
+						continue;
+					}
+				}
+			}
+			
 			struct pp_page *parsed_data = parse_file(filename);
 			free(filename);
 				if (parsed_data != NULL) {

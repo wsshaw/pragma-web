@@ -138,7 +138,9 @@ int main(int argc, char *argv[]) {
 			}
 		// TODO: Implement the logic for these operations (force rebuild, updated files only, dry run)
 		} else if (strcmp(argv[i], "-f") == 0) {
+			force_all_specified = true;
 		} else if (strcmp(argv[i], "-u") == 0) {
+			updated_only = true;
 		} else if (strcmp(argv[i], "-n") == 0) {
 		} else if (strcmp(argv[i], "-h") == 0) {
 			usage();
@@ -178,7 +180,18 @@ int main(int argc, char *argv[]) {
 
 	// Load the site sources from the specified directory
 	printf("base: %s\n", pragma_source_directory);
-	pp_page* page_list = load_site( 0, pragma_source_directory );	
+	
+	// Determine operation mode and get last run time if needed
+	int load_operation = LOAD_EVERYTHING;
+	time_t last_run_time = 0;
+	
+	if (updated_only) {
+		load_operation = LOAD_UPDATED_ONLY;
+		last_run_time = get_last_run_time(pragma_source_directory);
+		printf("=> -u flag specified: only processing files modified since %ld\n", (long)last_run_time);
+	}
+	
+	pp_page* page_list = load_site( load_operation, pragma_source_directory, last_run_time );	
 	char *icons_directory = char_convert(config->icons_dir); 
 
 	// load the list of site icons and store them in config->site_icons; assign them
@@ -193,7 +206,7 @@ int main(int argc, char *argv[]) {
 
 	// ...and build the indices
 	int num_pages = 0;
-	for (pp_page *y = page_list ; y->next != NULL ; y = y->next ) {
+	for (pp_page *y = page_list ; y != NULL ; y = y->next ) {
 		num_pages++;
 	} 
 	int num_indices = ((num_pages + 1) / config->index_size) + 1;
@@ -209,20 +222,25 @@ int main(int argc, char *argv[]) {
 		snprintf(index_name, 4, "%d", i);
 		printf("%s", index_name);
 		
-		// write indices to diskA
-		printf("allocating space for destination filename:\n");
-		char *index_destination = malloc(strlen(pragma_output_directory) + 20);
-		printf("passed malloc() for destination filename\n");
-		
-		strcpy(index_destination, pragma_output_directory);
-		strcat(index_destination, "index");
-		strcat(index_destination, i > 0 ? index_name : ""); 
-		strcat(index_destination, ".html");
-		write_file_contents(index_destination, main_index);
+		// Only write to disk if we got a valid index
+		if (main_index != NULL) {
+			// write indices to disk
+			printf("allocating space for destination filename:\n");
+			char *index_destination = malloc(strlen(pragma_output_directory) + 20);
+			printf("passed malloc() for destination filename\n");
+			
+			strcpy(index_destination, pragma_output_directory);
+			strcat(index_destination, "index");
+			strcat(index_destination, i > 0 ? index_name : ""); 
+			strcat(index_destination, ".html");
+			write_file_contents(index_destination, main_index);
 
-		// clean up from index generation
-		free(index_destination);
-		free(main_index);
+			// clean up from index generation
+			free(index_destination);
+			free(main_index);
+		} else {
+			printf("=> Skipping index %d (no content to write)\n", i);
+		}
 	}
 
 	// generate the scroll
@@ -243,28 +261,38 @@ int main(int argc, char *argv[]) {
 	wchar_t *rss_feed = build_rss(page_list, config);
 	printf("=> Generated RSS feed.\n");
 	
-	// write RSS feed to disk (in root directory)
-	char *rss_destination = malloc(strlen(pragma_output_directory) + 20);
-	strcpy(rss_destination, pragma_output_directory);
-	strcat(rss_destination, "feed.xml");
-	write_file_contents(rss_destination, rss_feed);
-	
-	printf("=> RSS feed written successfully to disk.\n");
-	free(rss_destination);
-	free(rss_feed);
+	// Only write RSS feed if we got valid content
+	if (rss_feed != NULL) {
+		// write RSS feed to disk (in root directory)
+		char *rss_destination = malloc(strlen(pragma_output_directory) + 20);
+		strcpy(rss_destination, pragma_output_directory);
+		strcat(rss_destination, "feed.xml");
+		write_file_contents(rss_destination, rss_feed);
+		
+		printf("=> RSS feed written successfully to disk.\n");
+		free(rss_destination);
+		free(rss_feed);
+	} else {
+		printf("=> Skipping RSS feed (no content to write)\n");
+	}
 
 	// generate tag index
 	wchar_t *tag_index = build_tag_index(page_list, config);
 	printf("=> Generated tag index.\n");
 
-	char *tag_destination = malloc(strlen(pragma_output_directory) + 20);
-	strcpy(tag_destination, pragma_output_directory);
-	strcat(tag_destination, "t/index.html");
-	write_file_contents(tag_destination, tag_index);
+	// Only write tag index if we got valid content
+	if (tag_index != NULL) {
+		char *tag_destination = malloc(strlen(pragma_output_directory) + 20);
+		strcpy(tag_destination, pragma_output_directory);
+		strcat(tag_destination, "t/index.html");
+		write_file_contents(tag_destination, tag_index);
 
-	printf("=> Tag index successfully written to disk.\n");
-	free(tag_destination);
-	free(tag_index);
+		printf("=> Tag index successfully written to disk.\n");
+		free(tag_destination);
+		free(tag_index);
+	} else {
+		printf("=> Skipping tag index (no content to write)\n");
+	}
 	
 	char *destination_file;
 
@@ -291,6 +319,10 @@ int main(int argc, char *argv[]) {
 
 	// clean up from site generation
 	wprintf(L"Generated site output. Cleaning up...\n");
+	
+	// Update the last run time to mark successful completion
+	update_last_run_time(pragma_source_directory);
+	
 	free_page_list(page_list);
 	free(posts_output_directory);
 	free_site_info(config);
