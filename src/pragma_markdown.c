@@ -395,13 +395,16 @@ wchar_t* parse_markdown(wchar_t *input) {
 		// get the line as displayed by printf()
 		swprintf(line, line_length + 1, L"%.*ls", line_length, s);
 	
-		// allocate memory for escaping literals
-		wchar_t *esc = malloc(32768);
+		// allocate memory for escaping literals (worst case: every char escaped = 2x length)
+		size_t esc_size = (wcslen(line) * 2 + 1);
+		wchar_t *esc = malloc(esc_size * sizeof(wchar_t));
 		if (esc == NULL) { printf("malloc() failed in parsing markdown!\n"); }
-		md_escape(line, esc, 32769);
+		md_escape(line, esc, esc_size);
 
+		// allocate buffer for inline formatting (estimate 3x for HTML tags)
+		size_t fmt_size = wcslen(line) * 3 + 256;
 		safe_buffer fmt;
-		if (safe_buffer_init(&fmt, 32768) != 0) {
+		if (safe_buffer_init(&fmt, fmt_size) != 0) {
 			printf("failed to init buffer for inline formatting!\n");
 			free(esc);
 			free(line);
