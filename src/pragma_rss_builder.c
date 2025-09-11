@@ -100,11 +100,13 @@ wchar_t* build_rss(pp_page* pages, site_info* site) {
         free(pub_date);
         wcscat(rss_output, L"</pubDate>\n");
         
-        // Description (lorem ipsum placeholder for now)
+        // Description (use summary or first 240 chars of content)
         wcscat(rss_output, L"<description>");
-        wcscat(rss_output, L"Lorem ipsum dolor sit amet, consectetur adipiscing elit. ");
-        wcscat(rss_output, L"Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ");
-        wcscat(rss_output, L"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.");
+        wchar_t *description = get_page_description(current);
+        if (description) {
+            wcscat(rss_output, description);
+            free(description);
+        }
         wcscat(rss_output, L"</description>\n");
         
         wcscat(rss_output, L"</item>\n");

@@ -39,13 +39,17 @@ pp_page* parse_file(const utf8_path filename) {
 	page->tags = malloc(1024);
 	page->date = malloc(256);
 	page->content = malloc(32768);
+	page->summary = malloc(1024);
 	page->icon = malloc(256);
 	page->static_icon = malloc(512);
 	page->parsed = true;
 	
-	// Initialize static_icon to empty string (with NULL check)
+	// Initialize static_icon and summary to empty strings (with NULL checks)
 	if (page->static_icon) {
 		wcscpy(page->static_icon, L"");
+	}
+	if (page->summary) {
+		wcscpy(page->summary, L"");
 	}
 
 	// Again, 32K of content is a realistic value, but there are smarter ways to do this
@@ -76,6 +80,8 @@ pp_page* parse_file(const utf8_path filename) {
 		return NULL;
 	}
 
+	// BLOCK: yaml "parser"
+
 	// Read the file into wide-character strings until we hit the standard delimiter that 
 	// goes between yaml (metadata) and HTML/md (content). FIXME: it's hard-coded at the moment.
 	while (fgetws(line, MAX_LINE_LENGTH, file) != NULL && wcscmp(line, L"###\n") != 0) {
@@ -87,6 +93,16 @@ pp_page* parse_file(const utf8_path filename) {
 		else if (wcsstr(line, L"tags:") != NULL) {
 			wcscpy(page->tags, line + wcslen(L"tags:"));
 			strip_terminal_newline(page->tags, NULL);	
+		}
+		else if (wcsstr(line, L"summary:") != NULL) {
+			wcscpy(page->summary, line + wcslen(L"summary:"));
+			strip_terminal_newline(page->summary, NULL);
+			// Remove leading whitespace
+			wchar_t *src = page->summary;
+			while (*src == L' ' || *src == L'\t') src++;
+			if (src != page->summary) {
+				wmemmove(page->summary, src, wcslen(src) + 1);
+			}
 		}
 		else if (wcsstr(line, L"date:") != NULL) {
 			wcscpy(page->date, line + wcslen(L"date:"));

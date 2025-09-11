@@ -35,6 +35,9 @@ if ( len(sys.argv[1:] ) > 0 ):
 
 output = """title:None
 tags:
+summary:
+static_icon:
+parse:
 date:""" + str(now) + """
 ###
 Your content here (Markdown or HTML)"""

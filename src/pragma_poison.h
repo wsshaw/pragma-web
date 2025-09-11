@@ -77,11 +77,13 @@ L"<head>"\
 L"<meta charset=\"utf-8\">"\
 L"<meta name=\"generator\" content=\"pragma-web_1.0.0\">"\
 L"<meta property=\"og:title\" content=\"{TITLE}\">"\
+L"<meta property=\"og:description\" content=\"{DESCRIPTION}\">"\
 L"<meta property=\"og:type\" content=\"article\">"\
 L"<meta property=\"og:locale\" content=\"en\">"\
 L"<meta property=\"og:image\" content=\"{MAIN_IMAGE}\">"\
 L"<meta property=\"og:site_name\" content=\"{SITE_NAME}\">"\
 L"<meta property=\"og:url\" content=\"{PAGE_URL}\">"\
+L"<meta name=\"description\" content=\"{DESCRIPTION}\">"\
 L"<title>#pragma poison | {PAGETITLE}</title>"\
 L"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"\
 L"<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">"\
@@ -147,6 +149,7 @@ typedef struct pp_page {
 	wchar_t *tags;
 	wchar_t *date;
 	wchar_t *content;
+	wchar_t *summary;
 	time_t last_modified;
 	time_t date_stamp;
 	struct pp_page *next;
@@ -207,6 +210,8 @@ void swap(tag_dict *a, tag_dict *b);
 void sort_tag_list(tag_dict *head);
 bool split_before(wchar_t *delim, const wchar_t *input, wchar_t *output);
 wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title);
+wchar_t* strip_html_tags(const wchar_t *input);
+wchar_t* get_page_description(pp_page *page);
 void free_page(pp_page *page);
 void free_site_info(site_info *config);
 void free_page_list(pp_page *head);

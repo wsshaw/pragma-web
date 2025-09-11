@@ -94,6 +94,15 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	page_output = replace_substring(page_output, L"{MAIN_IMAGE}", share_image);
 	page_output = replace_substring(page_output, L"{SITE_NAME}", site->site_name);
 	page_output = replace_substring(page_output, L"#MORE", L"");
+	
+	// Add description for Open Graph and meta tags
+	wchar_t *description = get_page_description(page);
+	if (description) {
+		page_output = replace_substring(page_output, L"{DESCRIPTION}", description);
+		free(description);
+	} else {
+		page_output = replace_substring(page_output, L"{DESCRIPTION}", L"");
+	}
 
 	// Free memory from string manufacturing; return page output
 	free(previous_id); 
