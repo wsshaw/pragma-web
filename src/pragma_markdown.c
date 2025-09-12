@@ -4,7 +4,7 @@
 * The markdown parser (in progress) is an ad hoc, self-contined minimalist parser that is meant to 
 * provide support for a few Markdown elements:
 *
-* - Headings (#, ##, etc)
+* - Headings (#, ##, etc) 
 * - Paragraphs (two successive line breaks)
 * - Horizontal rule (---, ***, or ___ between blank lines)
 * - Bold (**) and italic (*), plus a combination (***) of the two
@@ -26,15 +26,24 @@
 
 #include "pragma_poison.h"
 
-// State indicators for parsing inline/formatting elements that can span multiple lines
-int bold = 0, italic = 0, within_unordered_list = 0, within_ordered_list = 0, block_quote = 0, code = 0, underline = 0, indent_level = 0;
-
 // Safe buffer structure for dynamic string building with overflow protection
 typedef struct {
     wchar_t *buffer;
     size_t size;
     size_t used;
 } safe_buffer;
+
+// Parser state structure for thread-safe parsing
+typedef struct {
+    int bold;
+    int italic;
+    int within_unordered_list;
+    int within_ordered_list;
+    int block_quote;
+    int code;
+    int underline;
+    int indent_level;
+} md_parser_state;
 
 /**
  * safe_buffer_init(): Initialize a safe buffer with initial capacity.
@@ -240,29 +249,30 @@ void md_escape(const wchar_t *original, wchar_t *output, size_t output_size) {
  *
  * arguments:
  *  wchar_t *original (input text containing inline Markdown; must not be NULL)
- *  wchar_t *output   (destination buffer for appended HTML; must not be NULL)
+ *  safe_buffer *output (destination buffer for appended HTML; must not be NULL)
+ *  md_parser_state *state (parser state for tracking formatting; must not be NULL)
  *
  * returns:
  *  void
  */
-void md_inline(wchar_t *original, safe_buffer *output) {
+void md_inline(wchar_t *original, safe_buffer *output, md_parser_state *state) {
 	size_t length = wcslen(original);
 	for (size_t i = 0; i < length; i++) {
 		if (original[i] == L'*' && (i + 1 < length)) {
 			if (original[i + 1] == L'*') { // bold
-				safe_append( bold ? L"</strong>" : L"<strong>", output );
-				bold = 1 - bold;
+				safe_append( state->bold ? L"</strong>" : L"<strong>", output );
+				state->bold = 1 - state->bold;
 				i++;
 			} else {
-				safe_append( italic ? L"</i>" : L"<i>", output );
-				italic = 1 - italic;
+				safe_append( state->italic ? L"</i>" : L"<i>", output );
+				state->italic = 1 - state->italic;
 			}	
 		} else if (original[i] == L'`') { // code
-			safe_append( code ? L"</code>" : L"<code>", output );
-			code = 1 - code;
+			safe_append( state->code ? L"</code>" : L"<code>", output );
+			state->code = 1 - state->code;
 		} else if (original[i] == L'_') { // underline
-			safe_append( underline ? L"</u>" : L"<u>", output);
-			underline = 1 - underline;
+			safe_append( state->underline ? L"</u>" : L"<u>", output);
+			state->underline = 1 - state->underline;
 		} else if (original[i] == L'!') { // images 
 			if (i + 1 < length && original[i + 1] == L'[') {
 				// Find out bounds of the alt text element first...
@@ -372,13 +382,13 @@ wchar_t* parse_markdown(wchar_t *input) {
 		return NULL;
 	}
 
+	// Initialize parser state
+	md_parser_state state = {0};
+
 	// placemarkers while parsing out the line
   	wchar_t *s, *e;
 	s = e = input;
-  	s = e = (wchar_t*) input; 
-
-	// ensure that state values are reset when starting a new file
-	bold = italic = within_unordered_list = block_quote = code = underline = 0;
+  	s = e = (wchar_t*) input;
 
 	// Use this method instead of wcstok() because we need to keep the newlines
   	while((e = wcschr(s, L'\n'))) {
@@ -410,7 +420,7 @@ wchar_t* parse_markdown(wchar_t *input) {
 			free(line);
 			continue;
 		}
-		md_inline(esc, &fmt);
+		md_inline(esc, &fmt, &state);
 
 		if (fmt.buffer[0] == L'#') {
 			// a line starting with # must be a heading
@@ -418,45 +428,45 @@ wchar_t* parse_markdown(wchar_t *input) {
 		} else if (fmt.buffer[0] == L'-' && fmt.buffer[1] == L' ') {
 			// a line beginning with "- " is an unordered list item		
 			// close any previous lists (nesting = \t, not lists of lists)
-			if (within_ordered_list) {
-				within_ordered_list = 0;
+			if (state.within_ordered_list) {
+				state.within_ordered_list = 0;
 				safe_append(L"</ol>\n", &output);
 			}
-			if (!within_unordered_list) {
-				within_unordered_list = 1;
+			if (!state.within_unordered_list) {
+				state.within_unordered_list = 1;
 				safe_append(L"<ul>\n", &output); 
 			}
 			md_list(fmt.buffer, &output);
 		} else if (iswdigit(fmt.buffer[0]) && fmt.buffer[1] == L'.') {
 			// a line beginning with "1." (or "\d\." in general) is an ordered list item
-			if (within_unordered_list) {
-				within_unordered_list = 0;
+			if (state.within_unordered_list) {
+				state.within_unordered_list = 0;
 				safe_append(L"</ul>\n", &output);
 			}
-			if (!within_ordered_list) {
-				within_ordered_list = 1;
+			if (!state.within_ordered_list) {
+				state.within_ordered_list = 1;
 				safe_append(L"<ol>\n", &output);
 			}
 			md_list(fmt.buffer, &output);
 		} else if (fmt.buffer[0] == L'>') {
-			if (!block_quote) {
-				block_quote = 1;
+			if (!state.block_quote) {
+				state.block_quote = 1;
 				safe_append(L"<blockquote>", &output);
 			}
 			md_paragraph(fmt.buffer + 1, &output);
 		} else if ((fmt.buffer[0] == '\0') || (fmt.buffer[0] == '\n')) {
 			md_empty_line(&output);
 		} else {
-			if (within_unordered_list) {
-				within_unordered_list = 0;
+			if (state.within_unordered_list) {
+				state.within_unordered_list = 0;
 				safe_append(L"</ul>", &output);
 			} 
-			if (within_ordered_list) {
-				within_ordered_list = 0;
+			if (state.within_ordered_list) {
+				state.within_ordered_list = 0;
 				safe_append(L"</ol>\n", &output);
 			}
-			if (block_quote) { 
-				block_quote = 0;
+			if (state.block_quote) { 
+				state.block_quote = 0;
 				safe_append(L"</blockquote>", &output);
 			}
 			md_paragraph(fmt.buffer, &output);
@@ -468,23 +478,23 @@ wchar_t* parse_markdown(wchar_t *input) {
 	}		
 
 	// Clean up: did we leave a list open?  Bold?  etc.
-	if (within_unordered_list) {
-		within_unordered_list = 0;
+	if (state.within_unordered_list) {
+		state.within_unordered_list = 0;
 		safe_append(L"</ul>\n", &output);
 	} 
-	if (within_ordered_list) {
-		within_ordered_list = 0;
+	if (state.within_ordered_list) {
+		state.within_ordered_list = 0;
 		safe_append(L"</ol>\n", &output);
 	}
-	if (bold) 
+	if (state.bold) 
 		safe_append(L"</strong>", &output);
-	if (italic) 
+	if (state.italic) 
 		safe_append(L"</i>", &output);
-	if (block_quote)
+	if (state.block_quote)
 		safe_append(L"</blockquote>", &output);
-	if (code)
+	if (state.code)
 		safe_append(L"</code>", &output);
-	if (underline)
+	if (state.underline)
 		safe_append(L"</u>", &output);
 	
 	// Return the buffer, caller is responsible for freeing
