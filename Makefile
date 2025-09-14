@@ -9,7 +9,7 @@ SOURCES = $(wildcard $(SRC_DIR)/*.c)
 OBJECTS = $(SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 EXECUTABLE = $(BIN_DIR)/pragma
 
-.PHONY: all clean
+.PHONY: all clean local
 
 all: $(EXECUTABLE)
 
@@ -24,6 +24,11 @@ $(OBJ_DIR):
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
+
+local: $(EXECUTABLE)
+	@mkdir -p ~/bin/
+	cp $(EXECUTABLE) ~/bin/
+	@echo "Installed pragma to ~/bin/pragma. (ensure that ~/bin is in PATH)"
 
 clean:
 	rm -rf $(OBJ_DIR) $(EXECUTABLE)
