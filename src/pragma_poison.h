@@ -30,12 +30,11 @@ wchar_t* utf8_to_wchar(const utf8_path utf8_str);
 
 #define MAX_LINE_LENGTH 4096			// ...
 
-// Inputs
-#define SITE_SOURCES	"/Users/will/pragma2/dat/"// Input directory - dat files to convert to HTML.  (Default value; specify actual in argv or config)
+// Default subdirectories (relative paths, removed hard-coded magic paths :( on 2025-09-14)
 #define SITE_SOURCES_DEFAULT_SUBDIR	"dat/"
 
-// Outputs
-#define SITE_ROOT	"/Users/will/pp2/"	// Where to stage the generated site (Default value; specify actual in argv or config)
+// Site structure (relative paths within site root)
+// Note: SITE_SOURCES and SITE_ROOT are now specified via command line arguments only
 #define SITE_POSTS	"c/"			// Directory (within SITE_ROOT) for all generated posts
 #define SITE_SCROLL	"s/"			// Directory (within SITE_ROOT) for the scroll, i.e. index of all posts by date
 #define SITE_TAG_INDEX	"t/"			// Directory (within SITE_ROOT) for the indices of posts per tag
