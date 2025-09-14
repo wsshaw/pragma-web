@@ -66,165 +66,24 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 			continue;
 		} 
 
-		// At this point, we're where we need to be in the list, thanks to the previous 4 lines. 
-		// We want to render an index page with site->index_size items on it, or as many as we have, 
-		// whichever is greater.  
-		// FIXME: here and throughout, we need to abstract the HTML and not generate it directly like this,
-		// esp. with a hard-coded icon path
-		if (PRAGMA_DEBUG) printf("memory checkpoint: building post header\n");
-		wcscat(index_output, L"<div class=\"post_card\"><div class=\"post_head\">\n<div class=\"post_icon\">\n");
-		wcscat(index_output, L"<img class=\"icon\" alt=\"[icon]\" src=\"/img/icons/"); 
-		wcscat(index_output, current->icon);
-		wcscat(index_output, L"\">");
-		if (PRAGMA_DEBUG) printf("passed checkpoint\n");
+		// Use template system to render this index item
+		if (PRAGMA_DEBUG) printf("rendering post with template system\n");
 
-		// Create a link to the post (As above, TODO: insert the actual root URL of the site here and elsewhere.)
-		if (PRAGMA_DEBUG) printf("memory checkpoint: building post link\n");
-		wcscat(index_output, L"</div><div class=\"post_title\"><h3><a href=\"/c/");
-		
-		// Debug the timestamp value
-		if (PRAGMA_DEBUG) printf("DEBUG: current->date_stamp = %ld (0x%lx)\n", current->date_stamp, current->date_stamp);
-		
 		// Validate timestamp is reasonable (between 1970 and 2100)
 		if (current->date_stamp < 0 || current->date_stamp > 4102444800L) {
 			printf("! Warning: invalid timestamp %ld, using 0\n", current->date_stamp);
 			current->date_stamp = 0;
 		}
-		
-		wchar_t *link_filename = string_from_int(current->date_stamp);
-		if (!link_filename) {
-			printf("! Error: string_from_int returned NULL\n");
-			link_filename = wcsdup(L"0");
-		}
-		
-		if (PRAGMA_DEBUG) printf("DEBUG: link_filename = '%ls'\n", link_filename);
-		wcscat(index_output, link_filename);
-		free(link_filename);
-		wcscat(index_output, L".html\">");
-		
-		// Check for corruption right after wcscat
-		if (PRAGMA_DEBUG) {
-			size_t check_len = wcslen(index_output);
-			printf("DEBUG: After link append, buffer length = %zu\n", check_len);
-			for (size_t i = check_len > 50 ? check_len - 50 : 0; i < check_len; i++) {
-				if (index_output[i] > 0x10FFFF || index_output[i] < 0) {
-					printf("! Corruption detected at pos %zu: U+%08X\n", i, (unsigned int)index_output[i]);
-				}
-			}
-		}
-		
-		if (PRAGMA_DEBUG) printf("passed checkpoint\n");
 
-		// Add page data, beginning with title/date
-		if (PRAGMA_DEBUG) printf("memory checkpoint: building post title\n");
-		wcscat(index_output, current->title);
-		wcscat(index_output, L"</a></h3><i>Posted on ");
-		wchar_t *formatted_date = legible_date(current->date_stamp);
-		wcscat(index_output, formatted_date);
-		free(formatted_date);
-		wcscat(index_output, L"</i><br>\n");
-		if (PRAGMA_DEBUG) printf("passed checkpoint\n");
+		wchar_t *rendered_item = render_index_item_with_template(current, site);
+		if (rendered_item) {
+			wcscat(index_output, rendered_item);
+			free(rendered_item);
+		} else {
+			printf("! Warning: template rendering failed for post, skipping\n");
+		}
 
-		// Add tags
-		if (PRAGMA_DEBUG) printf("memory checkpoint: tag exploder\n");
-		wchar_t* tag_element = explode_tags(current->tags);
-		wcscat(index_output, tag_element);	
-		free(tag_element);
-		if (PRAGMA_DEBUG) printf("passed checkpoint\n");
-
-		if (PRAGMA_DEBUG) printf("memory checkpoint: adding content, looking for read-more delimiter\n");
-		wcscat(index_output, L"</div></div>\n<div class=\"post_in_index\">");
-		// content, or all the content up to the "read more" delimiter (which can appear anywhere)
-		if (PRAGMA_DEBUG && pages_processed == 1) {
-			printf("DEBUG: Processing 'Pear hat' post (post 2)\n");
-			printf("DEBUG: Content length: %zu\n", wcslen(current->content));
-			printf("DEBUG: Current buffer length before content: %zu\n", wcslen(index_output));
-		}
-		
-		// Allocate enough space for content + potential read-more HTML (about 100 extra chars should be safe)
-		size_t content_len = wcslen(current->content);
-		size_t extra_space = 150; // Space for read-more HTML + timestamp + safety margin
-		wchar_t *clipped_content = malloc((content_len + extra_space) * sizeof(wchar_t));
-		if (!clipped_content) {
-			printf("! ERROR: Failed to allocate clipped_content\n");
-			continue;
-		}
-		
-		bool did_split = split_before(READ_MORE_DELIMITER, current->content, clipped_content);
-		if (PRAGMA_DEBUG && pages_processed == 1) {
-			printf("DEBUG: split_before returned %s\n", did_split ? "true" : "false");
-			printf("DEBUG: clipped_content length: %zu\n", wcslen(clipped_content));
-		}
-		
-		if (did_split) {
-			size_t before_readmore = wcslen(clipped_content);
-			wcscat(clipped_content, L"<span style=\"font-weight:bold;\">[ <a href=\"/c/");
-			
-			// Create a new link_filename since the original was freed
-			wchar_t *readmore_link = string_from_int(current->date_stamp);
-			wcscat(clipped_content, readmore_link);
-			free(readmore_link);
-			
-			wcscat(clipped_content, L".html\">read more &gt;&gt;</a> ]</span>");
-			if (PRAGMA_DEBUG && pages_processed == 1) {
-				printf("DEBUG: After read-more append, clipped_content length: %zu (was %zu)\n", 
-				       wcslen(clipped_content), before_readmore);
-			}
-		}
-		
-		if (PRAGMA_DEBUG && pages_processed == 1) {
-			printf("DEBUG: About to append clipped_content to index_output\n");
-			printf("DEBUG: clipped_content buffer location: %p\n", (void*)clipped_content);
-			
-			// Check clipped_content for invalid characters
-			printf("DEBUG: Validating clipped_content for invalid characters...\n");
-			size_t clipped_len = wcslen(clipped_content);
-			for (size_t i = 0; i < clipped_len; i++) {
-				if (clipped_content[i] > 0x10FFFF || clipped_content[i] < 0) {
-					printf("! Invalid character in clipped_content at pos %zu: U+%08X\n", i, (unsigned int)clipped_content[i]);
-					// Show some context
-					printf("Context around invalid char: ");
-					for (size_t j = (i > 10 ? i - 10 : 0); j < i + 10 && j < clipped_len; j++) {
-						if (j == i) printf("[INVALID]");
-						else if (clipped_content[j] >= 32 && clipped_content[j] < 127) printf("%lc", clipped_content[j]);
-						else printf("?");
-					}
-					printf("\n");
-					break;
-				}
-			}
-			printf("DEBUG: clipped_content validation complete\n");
-		}
-		
-		wcscat(index_output, clipped_content);
-		
-		if (PRAGMA_DEBUG && pages_processed == 1) {
-			printf("DEBUG: After appending content, buffer length: %zu\n", wcslen(index_output));
-		}
-		
-		free(clipped_content);
-		wcscat(index_output, L"</div></div>\n");
-		if (PRAGMA_DEBUG) printf("passed checkpoint\n");
-
-		// Check for corruption after each post
-		if (PRAGMA_DEBUG) {
-			size_t post_len = wcslen(index_output);
-			printf("DEBUG: After post %d, length = %zu\n", pages_processed + 1, post_len);
-			for (size_t i = 2900; i < post_len && i < 3100; i++) {
-				if (index_output[i] > 0x10FFFF || index_output[i] < 0) {
-					printf("! Corruption after post %d at pos %zu: U+%08X\n", pages_processed + 1, i, (unsigned int)index_output[i]);
-					printf("Post title: '%ls'\n", current->title);
-					printf("Context: ");
-					for (size_t j = (i > 10 ? i - 10 : 0); j < i + 10 && j < post_len; j++) {
-						if (j == i) printf("[CORRUPT]");
-						else if (index_output[j] >= 32 && index_output[j] < 127) printf("%lc", index_output[j]);
-						else printf("?");
-					}
-					printf("\n");
-					break;
-				}
-			}
-		}
+		if (PRAGMA_DEBUG) printf("template rendering complete\n");
 
 		pages_processed++;
 		

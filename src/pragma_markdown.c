@@ -26,13 +26,6 @@
 
 #include "pragma_poison.h"
 
-// Safe buffer structure for dynamic string building with overflow protection
-typedef struct {
-    wchar_t *buffer;
-    size_t size;
-    size_t used;
-} safe_buffer;
-
 // Parser state structure for thread-safe parsing
 typedef struct {
     int bold;
@@ -45,78 +38,6 @@ typedef struct {
     int indent_level;
 } md_parser_state;
 
-/**
- * safe_buffer_init(): Initialize a safe buffer with initial capacity.
- *
- * arguments:
- *  safe_buffer *buf (buffer to initialize; must not be NULL)
- *  size_t initial_size (initial capacity in wide characters)
- *
- * returns:
- *  int (0 on success; -1 on failure)
- */
-int safe_buffer_init(safe_buffer *buf, size_t initial_size) {
-    if (!buf || initial_size == 0)
-        return -1;
-        
-    buf->buffer = malloc(initial_size * sizeof(wchar_t));
-    if (!buf->buffer)
-        return -1;
-        
-    buf->size = initial_size;
-    buf->used = 0;
-    buf->buffer[0] = L'\0';
-    return 0;
-}
-
-/**
- * safe_append(): Append text to a safe buffer with automatic reallocation.
- *
- * arguments:
- *  const wchar_t *text (text to append; must not be NULL)
- *  safe_buffer *buf (destination buffer; must not be NULL)
- *
- * returns:
- *  int (0 on success; -1 on failure)
- */
-int safe_append(const wchar_t *text, safe_buffer *buf) {
-    if (!text || !buf || !buf->buffer)
-        return -1;
-        
-    size_t text_len = wcslen(text);
-    if (buf->used + text_len + 1 >= buf->size) {
-        // Reallocate with 50% more space
-        size_t new_size = (buf->used + text_len + 1) * 3 / 2;
-        wchar_t *new_buffer = realloc(buf->buffer, new_size * sizeof(wchar_t));
-        if (!new_buffer)
-            return -1;
-            
-        buf->buffer = new_buffer;
-        buf->size = new_size;
-    }
-    
-    wcscpy(buf->buffer + buf->used, text);
-    buf->used += text_len;
-    return 0;
-}
-
-/**
- * safe_buffer_free(): Free resources associated with a safe buffer.
- *
- * arguments:
- *  safe_buffer *buf (buffer to free; may be NULL)
- *
- * returns:
- *  void
- */
-void safe_buffer_free(safe_buffer *buf) {
-    if (buf && buf->buffer) {
-        free(buf->buffer);
-        buf->buffer = NULL;
-        buf->size = 0;
-        buf->used = 0;
-    }
-}
 
 /*
 * md_header(): Convert a Markdown heading line (#, ##, …, ######) into an HTML <hN>.
@@ -132,16 +53,19 @@ void safe_buffer_free(safe_buffer *buf) {
 *  void
 */
 void md_header(wchar_t *line, safe_buffer *output) {
-	int level = 0; 
+	int level = 0;
 
 	// Determine which header element to use (1-6)
-	while (line[level] == L'#' && level < 6) 
+	while (line[level] == L'#' && level < 6)
 		level++;
 
-	// Build header HTML and append safely
-	wchar_t header[wcslen(line) + 32]; // Extra space for tags
-	swprintf(header, sizeof(header)/sizeof(wchar_t), L"<h%d>%ls</h%d>\n", level, line + level + 1, level);
-	safe_append(header, output);
+	// Build header HTML using the new HTML element function
+	wchar_t *heading = html_heading(level, line + level + 1, NULL);
+	if (heading) {
+		safe_append(heading, output);
+		safe_append(L"\n", output);
+		free(heading);
+	}
 }
 
 /**
@@ -160,9 +84,13 @@ void md_header(wchar_t *line, safe_buffer *output) {
 void md_paragraph(wchar_t *line, safe_buffer *output) {
 	if (output == NULL) { printf("Output is null \n"); }
 	if (line == NULL) { printf("Line is null \n"); }
-	safe_append(L"<p>", output);
-	safe_append(line, output);
-	safe_append(L"</p>\n", output);
+
+	wchar_t *paragraph = html_paragraph(line, NULL);
+	if (paragraph) {
+		safe_append(paragraph, output);
+		safe_append(L"\n", output);
+		free(paragraph);
+	}
 }
 
 /**
@@ -179,9 +107,12 @@ void md_paragraph(wchar_t *line, safe_buffer *output) {
  *  void
  */
 void md_list(wchar_t *line, safe_buffer *output) {
-	safe_append(L"<li>", output);
-	safe_append(line + 2, output);
-	safe_append(L"</li>\n", output);
+	wchar_t *list_item = html_list_item(line + 2, NULL);
+	if (list_item) {
+		safe_append(list_item, output);
+		safe_append(L"\n", output);
+		free(list_item);
+	}
 }
 
 /**
@@ -334,12 +265,12 @@ void md_inline(wchar_t *original, safe_buffer *output, md_parser_state *state) {
 
 				// tk support for caption 
 
-				// Construct the <img> tag
-				safe_append(L"<img class=\"post\" src=\"", output);
-				safe_append(image_url, output);
-				safe_append(L"\" alt=\"", output);
-				safe_append(alt_text, output);
-				safe_append(L"\">", output);
+				// Construct the <img> tag using the new HTML function
+				wchar_t *image_tag = html_image(image_url, alt_text, L"post");
+				if (image_tag) {
+					safe_append(image_tag, output);
+					free(image_tag);
+				}
 				
 				// Free allocated memory
 				free(alt_text);

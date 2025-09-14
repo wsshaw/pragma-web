@@ -211,6 +211,67 @@ void swap(tag_dict *a, tag_dict *b);
 void sort_tag_list(tag_dict *head);
 bool split_before(wchar_t *delim, const wchar_t *input, wchar_t *output);
 wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title);
+
+// HTML element generation functions
+wchar_t* html_escape(const wchar_t *text);
+wchar_t* html_element(const wchar_t *tag, const wchar_t *content, const wchar_t *attributes);
+wchar_t* html_self_closing(const wchar_t *tag, const wchar_t *attributes);
+wchar_t* html_link(const wchar_t *href, const wchar_t *text, const wchar_t *css_class);
+wchar_t* html_image(const wchar_t *src, const wchar_t *alt, const wchar_t *css_class);
+wchar_t* html_div(const wchar_t *content, const wchar_t *css_class);
+wchar_t* html_heading(int level, const wchar_t *text, const wchar_t *css_class);
+wchar_t* html_paragraph(const wchar_t *text, const wchar_t *css_class);
+wchar_t* html_list_item(const wchar_t *content, const wchar_t *css_class);
+
+// HTML component generation functions
+wchar_t* html_post_icon(const wchar_t *icon_filename);
+wchar_t* html_post_title(const wchar_t *title_content);
+wchar_t* html_post_card_header(const wchar_t *icon_filename, const wchar_t *title_content,
+                               const wchar_t *date_content, const wchar_t *tags_content);
+wchar_t* html_navigation_links(const wchar_t *prev_href, const wchar_t *next_href);
+wchar_t* html_post_in_index(const wchar_t *content);
+wchar_t* html_read_more_link(const wchar_t *href);
+wchar_t* html_complete_post_card(const wchar_t *icon_filename, const wchar_t *title_content,
+                                 const wchar_t *date_content, const wchar_t *tags_content,
+                                 const wchar_t *post_content, const wchar_t *read_more_href);
+
+// Template system structures and functions
+typedef struct {
+    wchar_t *title;
+    wchar_t *date;
+    wchar_t *icon;
+    wchar_t *content;
+    wchar_t *post_url;
+    wchar_t *prev_url;
+    wchar_t *next_url;
+    wchar_t *description;
+
+    // Tag arrays
+    wchar_t **tags;
+    wchar_t **tag_urls;
+    int tag_count;
+
+    // Boolean flags
+    bool has_prev;
+    bool has_next;
+    bool has_navigation;
+    bool has_tags;
+} template_data;
+
+// Template functions
+void template_free(template_data *data);
+template_data* template_data_from_page(pp_page *page, site_info *site);
+wchar_t* load_template_file(const char *template_path);
+wchar_t* template_replace_token(wchar_t *template, const wchar_t *token_name, const wchar_t *replacement_value);
+wchar_t* template_process_loop(wchar_t *template, template_data *data);
+wchar_t* template_process_conditionals(wchar_t *template, template_data *data);
+wchar_t* apply_template(const char *template_path, template_data *data);
+
+// Template helper functions
+wchar_t* render_post_card_with_template(pp_page *page, site_info *site);
+wchar_t* render_navigation_with_template(pp_page *page, site_info *site);
+wchar_t* render_page_with_template(pp_page *page, site_info *site);
+wchar_t* render_index_item_with_template(pp_page *page, site_info *site);
 wchar_t* strip_html_tags(const wchar_t *input);
 wchar_t* get_page_description(pp_page *page);
 time_t get_last_run_time(const char *site_directory);
@@ -218,3 +279,40 @@ void update_last_run_time(const char *site_directory);
 void free_page(pp_page *page);
 void free_site_info(site_info *config);
 void free_page_list(pp_page *head);
+
+// Enhanced safe buffer system with pooling and automatic escaping
+typedef struct {
+    wchar_t *buffer;
+    size_t size;
+    size_t used;
+    bool auto_escape;  // Automatically escape HTML when appending
+} safe_buffer;
+
+typedef struct buffer_pool {
+    safe_buffer *buffers;
+    size_t pool_size;
+    size_t next_available;
+    bool *in_use;
+} buffer_pool;
+
+// Enhanced safe buffer functions
+int safe_buffer_init(safe_buffer *buf, size_t initial_size);
+int safe_buffer_init_with_escape(safe_buffer *buf, size_t initial_size, bool auto_escape);
+int safe_append(const wchar_t *text, safe_buffer *buf);
+int safe_append_escaped(const wchar_t *text, safe_buffer *buf);
+int safe_append_char(wchar_t c, safe_buffer *buf);
+void safe_buffer_reset(safe_buffer *buf);
+void safe_buffer_free(safe_buffer *buf);
+wchar_t* safe_buffer_to_string(safe_buffer *buf);
+
+// Buffer pool functions
+buffer_pool* buffer_pool_create(size_t pool_size, size_t buffer_size);
+safe_buffer* buffer_pool_get(buffer_pool *pool);
+void buffer_pool_return(buffer_pool *pool, safe_buffer *buf);
+void buffer_pool_destroy(buffer_pool *pool);
+
+// Global buffer pool functions (recommended for most HTML generation)
+void buffer_pool_init_global(void);
+void buffer_pool_cleanup_global(void);
+safe_buffer* buffer_pool_get_global(void);
+void buffer_pool_return_global(safe_buffer *buf);

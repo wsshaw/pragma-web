@@ -17,9 +17,22 @@
  * returns:
  *  int (EXIT_SUCCESS or EXIT_FAILURE)
  */
+/**
+ * cleanup_buffer_pool(): Clean up global buffer pool at program exit.
+ */
+void cleanup_buffer_pool(void) {
+	buffer_pool_cleanup_global();
+}
+
 int main(int argc, char *argv[]) {
 	// setlocale() needs to be called asap so that Unicode is handled properly; change as needed
 	setlocale(LC_CTYPE, "en_US.UTF-8");
+
+	// Initialize global buffer pool for unified buffer management
+	buffer_pool_init_global();
+
+	// Register cleanup function for automatic cleanup at exit
+	atexit(cleanup_buffer_pool);
 
 	// some significant locations and options we need to keep track of at startup
 	char *pragma_source_directory, *pragma_output_directory, *posts_output_directory;
