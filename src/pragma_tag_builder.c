@@ -38,7 +38,7 @@ wchar_t* explode_tags(wchar_t* input) {
 		return in;
 
 	wchar_t *output = malloc(4096 * sizeof(wchar_t));
-	wcscpy(output, L""); 
+	wcscpy(output, L"");
 	while (t) {
 	//	strip_terminal_newline(t, NULL);
 		wcscat(output, L"<a href=\"/t/");
@@ -48,7 +48,9 @@ wchar_t* explode_tags(wchar_t* input) {
 		wcscat(output, L"</a>");
 
 		t = wcstok(NULL, L",", &tkn);
-		wcscat(output, t ? L", " : L"");
+		if (t) {
+			wcscat(output, L", ");
+		}
 	}
 	free(in);
 
