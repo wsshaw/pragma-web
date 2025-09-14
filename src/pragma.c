@@ -277,20 +277,37 @@ int main(int argc, char *argv[]) {
             current_page = current_page->next;
         }
         printf("=> Built %d individual pages\n", page_count);
-
-        // Build index
+        // Build index pages
         if (config->index_size > 0) {
-            wchar_t *index_html = build_index(pages, config, 0);
-            if (index_html) {
-                char index_path[1024];
-                snprintf(index_path, sizeof(index_path), "%s/index.html", opts.output_dir);
-                write_file_contents(index_path, index_html);
-                free(index_html);
+            // Count total pages to determine how many index pages we need
+            int total_posts = 0;
+            for (pp_page *count_page = pages; count_page != NULL; count_page = count_page->next) {
+                total_posts++;
+            }
+
+            int total_index_pages = (total_posts + config->index_size - 1) / config->index_size; // Ceiling division
+            printf("=> building %d index pages for %d posts...", total_index_pages, total_posts);
+
+            for (int page_num = 0; page_num < total_index_pages; page_num++) {
+                wchar_t *index_html = build_index(pages, config, page_num);
+                if (index_html) {
+                    char index_path[1024];
+                    if (page_num == 0) {
+                        // First page is index.html
+                        snprintf(index_path, sizeof(index_path), "%s/index.html", opts.output_dir);
+                    } else {
+                        // Subsequent pages are index1.html, index2.html, etc.
+                        snprintf(index_path, sizeof(index_path), "%s/index%d.html", opts.output_dir, page_num);
+                    }
+                    write_file_contents(index_path, index_html);
+                    free(index_html);
+                }
             }
         }
 
         // Build scroll (chronological index)
         if (config->build_scroll) {
+			printf("=> building scroll...");
             wchar_t *scroll_html = build_scroll(pages, config);
             if (scroll_html) {
                 char scroll_path[1024];
@@ -302,6 +319,7 @@ int main(int argc, char *argv[]) {
 
         // Build tag indices
         if (config->build_tags) {
+			printf("=> building tag indices...");
             wchar_t *tag_html = build_tag_index(pages, config);
             if (tag_html) {
                 char tag_path[1024];
@@ -312,6 +330,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Build RSS feed
+		printf("=> generating RSS feed...");
         wchar_t *rss_xml = build_rss(pages, config);
         if (rss_xml) {
             char rss_path[1024];
@@ -323,7 +342,7 @@ int main(int argc, char *argv[]) {
         // Update last run time
         update_last_run_time(opts.source_dir);
 
-        printf("=> Site generation complete\n");
+        printf("=> Site generation complete.\n");
     } else {
         printf("=> Dry run complete - no files written\n");
     }
