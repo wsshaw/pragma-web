@@ -39,13 +39,28 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	// Try to make reasonable assumptions about the memory to allocate: page, header, footer, some wiggle room.
 	size_t j = (wcslen(page->content) + wcslen(site->header) + wcslen(site->footer) + 1024) * sizeof(wchar_t);
 	wchar_t *page_output = malloc(j);
-	wchar_t *share_image = malloc(128 * sizeof(wchar_t));
+	wchar_t *share_image = malloc(512 * sizeof(wchar_t));
 
 	if (page->icon) {
-		wcscpy(share_image, L"/img/icons/");
+		// Build full URL for page-specific icon
+		wcscpy(share_image, site->base_url);
+		wcscat(share_image, L"img/icons/");
 		wcscat(share_image, page->icon);
 	} else {
-		wcscpy(share_image, site->default_image);
+		// Use default image - check if it's already a full URL
+		if (wcsstr(site->default_image, L"://")) {
+			// Already a full URL
+			wcscpy(share_image, site->default_image);
+		} else {
+			// Make it a full URL
+			wcscpy(share_image, site->base_url);
+			// Remove leading slash if present since base_url should include trailing slash
+			const wchar_t *default_path = site->default_image;
+			if (*default_path == L'/') {
+				default_path++;
+			}
+			wcscat(share_image, default_path);
+		}
 	}
 
 	if (!page_output) {

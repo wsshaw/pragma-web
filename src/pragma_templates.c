@@ -87,13 +87,13 @@ template_data* template_data_from_page(pp_page *page, site_info *site) {
         data->date = legible_date(page->date_stamp);
     }
 
-    // Generate URLs
+    // Generate URLs (full URLs for proper og:url metadata)
     wchar_t *timestamp_str = string_from_int(page->date_stamp);
     if (timestamp_str) {
-        size_t url_len = wcslen(timestamp_str) + 10;
+        size_t url_len = wcslen(site->base_url) + wcslen(timestamp_str) + 20;
         data->post_url = malloc(url_len * sizeof(wchar_t));
         if (data->post_url) {
-            swprintf(data->post_url, url_len, L"/c/%ls.html", timestamp_str);
+            swprintf(data->post_url, url_len, L"%lsc/%ls.html", site->base_url, timestamp_str);
         }
         free(timestamp_str);
     }

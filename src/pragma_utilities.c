@@ -926,7 +926,23 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 	// Note: {TAGS} and {DATE} are handled by individual page builders
 	// output = replace_substring(output, L"{TAGS}", L"");
 	// output = replace_substring(output, L"{DATE}", L"");
-	output = replace_substring(output, L"{MAIN_IMAGE}", site->default_image);
+	// Build full URL for default image
+	wchar_t *full_default_image = malloc(512 * sizeof(wchar_t));
+	if (wcsstr(site->default_image, L"://")) {
+		// Already a full URL
+		wcscpy(full_default_image, site->default_image);
+	} else {
+		// Make it a full URL
+		wcscpy(full_default_image, site->base_url);
+		// Remove leading slash if present since base_url should include trailing slash
+		const wchar_t *default_path = site->default_image;
+		if (*default_path == L'/') {
+			default_path++;
+		}
+		wcscat(full_default_image, default_path);
+	}
+	output = replace_substring(output, L"{MAIN_IMAGE}", full_default_image);
+	free(full_default_image);
 	output = replace_substring(output, L"{SITE_NAME}", site->site_name);
 	
 	if (page_url) {

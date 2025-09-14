@@ -225,9 +225,26 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	index_output = replace_substring(index_output, L"{DATE}", L"");
 	if (index_output != original) free(original);
 	
+	// Build full URL for default image
+	wchar_t *full_default_image = malloc(512 * sizeof(wchar_t));
+	if (wcsstr(site->default_image, L"://")) {
+		// Already a full URL
+		wcscpy(full_default_image, site->default_image);
+	} else {
+		// Make it a full URL
+		wcscpy(full_default_image, site->base_url);
+		// Remove leading slash if present since base_url should include trailing slash
+		const wchar_t *default_path = site->default_image;
+		if (*default_path == L'/') {
+			default_path++;
+		}
+		wcscat(full_default_image, default_path);
+	}
+
 	original = index_output;
-	index_output = replace_substring(index_output, L"{MAIN_IMAGE}", site->default_image);
+	index_output = replace_substring(index_output, L"{MAIN_IMAGE}", full_default_image);
 	if (index_output != original) free(original);
+	free(full_default_image);
 	
 	original = index_output;
 	index_output = replace_substring(index_output, L"{SITE_NAME}", site->site_name);
