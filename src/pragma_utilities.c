@@ -33,7 +33,9 @@ const char *pragma_basic_files[] = {
 	"/templates/post_card.html",
 	"/templates/single_page.html",
 	"/templates/navigation.html",
-	"/templates/index_item.html"
+	"/templates/index_item.html",
+	"/dat/sample_post.txt",
+	"/img/icons/default.svg"
 };
 
 /**
@@ -50,7 +52,9 @@ const wchar_t *pragma_basic_file_skeletons[] = {
 	DEFAULT_TEMPLATE_POST_CARD,
 	DEFAULT_TEMPLATE_SINGLE_PAGE,
 	DEFAULT_TEMPLATE_NAVIGATION,
-	DEFAULT_TEMPLATE_INDEX_ITEM
+	DEFAULT_TEMPLATE_INDEX_ITEM,
+	DEFAULT_SAMPLE_POST,
+	DEFAULT_ICON_SVG
 };
 
 /**
@@ -67,7 +71,9 @@ enum pragma_file_info {
 	TEMPLATE_POST_CARD,
 	TEMPLATE_SINGLE_PAGE,
 	TEMPLATE_NAVIGATION,
-	TEMPLATE_INDEX_ITEM
+	TEMPLATE_INDEX_ITEM,
+	SAMPLE_POST,
+	DEFAULT_ICON
 };
 
 /**
@@ -132,7 +138,7 @@ void build_new_pragma_site( char *t ) {
 
 		status = utf8_mkdir(path, 0700);
 		if (status == 0) {
-			printf("=> Created directory %s\n", path);
+			printf("   => Created directory %s\n", path);
 		} else { 
 			printf("! Error: couldn't create directory %s!\n", pragma_directories[i]);
 			perror("Aborting. The source directories for this website won't be properly configured.\n");
@@ -141,13 +147,14 @@ void build_new_pragma_site( char *t ) {
 	}
 	
 	// If we made it this far, the directories have to exist; create the skeleton files
+	printf("=> Making site config, templates, and examples.\n"); 
 	for (int i = 0 ; i < (int)(sizeof(pragma_basic_files) / sizeof(pragma_basic_files[0])) ; ++i) {
 		strcpy(path,t);
 		strcat(path, pragma_basic_files[i]);
 
 		status = write_file_contents(path, pragma_basic_file_skeletons[i]);
 		if (status == 0) 
-			printf("=> Created %s.\n", pragma_basic_files[i]);
+			printf("   => Created %s.\n", pragma_basic_files[i]);
 		else {
 			printf("! Error: couldn't create file %s!\n", pragma_basic_files[i]);
 			perror("failure: ");
@@ -155,7 +162,7 @@ void build_new_pragma_site( char *t ) {
 		}
 		
 	}
-	printf("Successfully created new site in %s.\n\n", t);
+	printf("Successfully created new site in %s.\nYou should edit %s/pragma_config.yml before building the site.\n\n", t, t);
 }
 
 /**

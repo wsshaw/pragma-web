@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_SUCCESS);
     } else if (validation_result == 2) {
         // Create site and exit
-        printf("=> Creating new pragma site in %s\n", opts.output_dir);
+        printf("Will create a new pragma-web site in %s\n\n", opts.output_dir);
         build_new_pragma_site(opts.output_dir);
         exit(EXIT_SUCCESS);
     }
@@ -202,6 +202,7 @@ int main(int argc, char *argv[]) {
 
     // Build posts directory path
     strcpy(posts_output_directory, opts.output_dir);
+	// accommodate trailing / or not
     strcat(posts_output_directory, opts.output_dir[strlen(opts.output_dir)-1] != '/' ? "/" : "");
     strcat(posts_output_directory, SITE_POSTS);
 
@@ -217,7 +218,7 @@ int main(int argc, char *argv[]) {
     wprintf(L"%s\n", config->base_dir);
 
     // Determine loading mode based on options
-    int load_mode = LOAD_EVERYTHING;
+    int load_mode = LOAD_EVERYTHING; // default to full site load
     time_t since_time = 0;
 
     if (opts.updated_only) {
@@ -276,7 +277,7 @@ int main(int argc, char *argv[]) {
             }
             current_page = current_page->next;
         }
-        printf("=> Built %d individual pages\n", page_count);
+        printf("=> Built %d individual pages.\n", page_count);
         // Build index pages
         if (config->index_size > 0) {
             // Count total pages to determine how many index pages we need
@@ -286,7 +287,7 @@ int main(int argc, char *argv[]) {
             }
 
             int total_index_pages = (total_posts + config->index_size - 1) / config->index_size; // Ceiling division
-            printf("=> building %d index pages for %d posts...", total_index_pages, total_posts);
+            printf("=> building %d index pages for %d posts...\n", total_index_pages, total_posts);
 
             for (int page_num = 0; page_num < total_index_pages; page_num++) {
                 wchar_t *index_html = build_index(pages, config, page_num);
@@ -307,7 +308,7 @@ int main(int argc, char *argv[]) {
 
         // Build scroll (chronological index)
         if (config->build_scroll) {
-			printf("=> building scroll...");
+			printf("=> building scroll...\n");
             wchar_t *scroll_html = build_scroll(pages, config);
             if (scroll_html) {
                 char scroll_path[1024];
@@ -319,7 +320,7 @@ int main(int argc, char *argv[]) {
 
         // Build tag indices
         if (config->build_tags) {
-			printf("=> building tag indices...");
+			printf("=> building tag indices...\n");
             wchar_t *tag_html = build_tag_index(pages, config);
             if (tag_html) {
                 char tag_path[1024];
@@ -330,7 +331,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Build RSS feed
-		printf("=> generating RSS feed...");
+		printf("=> generating RSS feed...\n");
         wchar_t *rss_xml = build_rss(pages, config);
         if (rss_xml) {
             char rss_path[1024];

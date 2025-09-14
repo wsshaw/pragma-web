@@ -51,7 +51,7 @@ wchar_t* utf8_to_wchar(const utf8_path utf8_str);
 * to generate the files from this source rather than template files.  (The pragma executable should
 * be able to live anywhere with no supporting files)
 */
-#define DEFAULT_YAML	L"---\nsite_name:Web disaster\njs:no\nbuild_tags:yes\nbuild_scroll:yes\ncss:p.css\nheader:_header.html\nfooter:_footer.html\nindex_size:10\nicons_dir:img/icons\ntagline:Comparison is always true due to limited range of data type.\nread_more:-1\ndefault_image:/img/default.png\nbase_url:https://yourdomain.edu"
+#define DEFAULT_YAML	L"---\nsite_name:Web disaster\njs:no\nbuild_tags:yes\nbuild_scroll:yes\ncss:p.css\nheader:_header.html\nfooter:_footer.html\nindex_size:10\nicons_dir:img/icons\ntagline:Comparison is always true due to limited range of data type.\nread_more:-1\ndefault_image:/img/default.png\nbase_url:https://yourdomain.edu/"
 #define DEFAULT_YAML_FILENAME "pragma_config.yml"
 #define DEFAULT_CSS	L"body {\n  margin-left:10em;\n  max-width:50%;\n}\n\n" \
 L"h2 {\n margin-bottom:2px;\n}\n\n" \
@@ -106,6 +106,25 @@ L"<p>"
 
 #define DEFAULT_FOOTER	L"</div></body><script src=\"https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js\"></script><link href=\"https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css\" rel=\"stylesheet\"><script>const lightbox = GLightbox();</script>"\
 L"<link rel=\"stylesheet\" href=\"/p.css\"></html>"
+
+#define DEFAULT_SAMPLE_POST L"Welcome to pragma!\n"\
+L"tags:welcome,sample\n"\
+L"date:2024-01-01 12:00:00\n"\
+L"icon:default.svg\n"\
+L"---\n"\
+L"This is your first post! Edit this file in the `dat/` directory to get started.\n\n"\
+L"You can add more posts by creating `.txt` files with the same format:\n"\
+L"- Title on first line\n"\
+L"- Metadata (tags, date, icon) on following lines\n"\
+L"- `---` separator\n"\
+L"- Content in markdown format\n\n"\
+L"#MORE\n\n"\
+L"Additional content after the #MORE tag appears only on individual post pages.\n"
+
+#define DEFAULT_ICON_SVG L"<svg width=\"64\" height=\"64\" xmlns=\"http://www.w3.org/2000/svg\">\n"\
+L"<rect width=\"64\" height=\"64\" fill=\"#666\" rx=\"8\"/>\n"\
+L"<text x=\"32\" y=\"40\" font-family=\"Arial\" font-size=\"24\" fill=\"white\" text-anchor=\"middle\">P</text>\n"\
+L"</svg>"
 
 // Default template files for new sites (card for use in any context, standalone page, navigation widgets)
 #define DEFAULT_TEMPLATE_POST_CARD L"<div class=\"post_card\">\n"\

@@ -71,6 +71,216 @@ wchar_t* explode_tags(wchar_t* input) {
 }
 
 /**
+ * Simple hash table for wide character strings
+ */
+#define HASH_TABLE_SIZE 1009  // Prime number for better distribution
+
+typedef struct hash_entry {
+    wchar_t *key;
+    struct hash_entry *next;  // Chain for collisions
+} hash_entry;
+
+typedef struct hash_table {
+    hash_entry *buckets[HASH_TABLE_SIZE];
+    wchar_t **keys;     // Array of unique keys for iteration
+    int key_count;
+    int key_capacity;
+} hash_table;
+
+/**
+ * Simple hash function for wide character strings
+ */
+static unsigned int hash_wstring(const wchar_t *str) {
+    unsigned int hash = 5381;
+    while (*str) {
+        hash = ((hash << 5) + hash) + (unsigned int)*str++;
+    }
+    return hash % HASH_TABLE_SIZE;
+}
+
+/**
+ * Create a new hash table
+ */
+static hash_table* create_hash_table() {
+    hash_table *table = malloc(sizeof(hash_table));
+    memset(table->buckets, 0, sizeof(table->buckets));
+
+    table->key_capacity = 256;  // Start with room for 256 unique tags
+    table->keys = malloc(table->key_capacity * sizeof(wchar_t*));
+    table->key_count = 0;
+
+    return table;
+}
+
+/**
+ * Check if key exists in hash table
+ */
+static bool hash_contains(hash_table *table, const wchar_t *key) {
+    unsigned int bucket = hash_wstring(key);
+    hash_entry *entry = table->buckets[bucket];
+
+    while (entry) {
+        if (wcscmp(entry->key, key) == 0) {
+            return true;
+        }
+        entry = entry->next;
+    }
+    return false;
+}
+
+/**
+ * Add key to hash table (only if it doesn't exist)
+ */
+static bool hash_add(hash_table *table, const wchar_t *key) {
+    if (hash_contains(table, key)) {
+        return false;  // Already exists
+    }
+
+    unsigned int bucket = hash_wstring(key);
+
+    // Create new entry
+    hash_entry *entry = malloc(sizeof(hash_entry));
+    entry->key = malloc((wcslen(key) + 1) * sizeof(wchar_t));
+    wcscpy(entry->key, key);
+
+    // Add to bucket chain
+    entry->next = table->buckets[bucket];
+    table->buckets[bucket] = entry;
+
+    // Add to keys array for iteration
+    if (table->key_count >= table->key_capacity) {
+        table->key_capacity *= 2;
+        table->keys = realloc(table->keys, table->key_capacity * sizeof(wchar_t*));
+    }
+    table->keys[table->key_count++] = entry->key;
+
+    return true;  // Successfully added
+}
+
+/**
+ * Free hash table and all its contents
+ */
+static void free_hash_table(hash_table *table) {
+    if (!table) return;
+
+    // Free all entries
+    for (int i = 0; i < HASH_TABLE_SIZE; i++) {
+        hash_entry *entry = table->buckets[i];
+        while (entry) {
+            hash_entry *next = entry->next;
+            free(entry->key);
+            free(entry);
+            entry = next;
+        }
+    }
+
+    free(table->keys);
+    free(table);
+}
+
+/**
+ * Compare function for qsort on wide character strings
+ */
+static int compare_wchar_strings(const void *a, const void *b) {
+    const wchar_t *str1 = *(const wchar_t**)a;
+    const wchar_t *str2 = *(const wchar_t**)b;
+    return wcscmp(str1, str2);
+}
+
+/**
+ * Simple structure to hold pre-parsed tag data for a page
+ */
+typedef struct page_tags {
+    pp_page *page;
+    wchar_t **tags;  // Array of tag strings
+    int tag_count;
+} page_tags;
+
+/**
+ * parse_page_tags(): Parse tags for a single page into an array
+ */
+static page_tags* parse_page_tags(pp_page *page) {
+    if (!page || !page->tags) return NULL;
+
+    page_tags *parsed = malloc(sizeof(page_tags));
+    parsed->page = page;
+    parsed->tags = NULL;
+    parsed->tag_count = 0;
+
+    // Copy tags string for parsing
+    wchar_t *tag_temp = malloc((wcslen(page->tags) + 32) * sizeof(wchar_t));
+    wcscpy(tag_temp, page->tags);
+
+    // Count tags first
+    wchar_t *tkn;
+    wchar_t *t = wcstok(tag_temp, L",", &tkn);
+    while (t) {
+        // Skip leading whitespace
+        while (*t && iswspace(*t)) t++;
+        if (*t) parsed->tag_count++;
+        t = wcstok(NULL, L",", &tkn);
+    }
+
+    if (parsed->tag_count == 0) {
+        free(tag_temp);
+        free(parsed);
+        return NULL;
+    }
+
+    // Allocate tag array
+    parsed->tags = malloc(parsed->tag_count * sizeof(wchar_t*));
+
+    // Parse tags again and store them
+    wcscpy(tag_temp, page->tags);
+    t = wcstok(tag_temp, L",", &tkn);
+    int i = 0;
+    while (t && i < parsed->tag_count) {
+        // Trim whitespace
+        while (*t && iswspace(*t)) t++;
+        wchar_t *end = t + wcslen(t) - 1;
+        while (end > t && iswspace(*end)) *end-- = L'\0';
+
+        if (*t) {
+            parsed->tags[i] = malloc((wcslen(t) + 1) * sizeof(wchar_t));
+            wcscpy(parsed->tags[i], t);
+            i++;
+        }
+        t = wcstok(NULL, L",", &tkn);
+    }
+    parsed->tag_count = i; // Actual count after trimming
+
+    free(tag_temp);
+    return parsed;
+}
+
+/**
+ * free_page_tags(): Free a page_tags structure
+ */
+static void free_page_tags(page_tags *parsed) {
+    if (!parsed) return;
+
+    for (int i = 0; i < parsed->tag_count; i++) {
+        free(parsed->tags[i]);
+    }
+    free(parsed->tags);
+    free(parsed);
+}
+
+/**
+ * page_has_tag(): Check if a parsed page has a specific tag
+ */
+static bool page_has_tag(page_tags *parsed, const wchar_t *tag) {
+    if (!parsed || !tag) return false;
+
+    for (int i = 0; i < parsed->tag_count; i++) {
+        if (wcscmp(parsed->tags[i], tag) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * build_tag_index(): Build the tag index page and per-tag listing pages.
  *
  * Iterates all posts to collect unique tags, sorts them, and renders:
@@ -93,13 +303,46 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 	if (!pages)
 		return NULL;
 
-	bool first = true;
-	struct tag_dict *tags = malloc(sizeof(tag_dict));
 	wchar_t *link_date;
 
-	tags->tag = malloc(64 * sizeof(wchar_t));
-	wcscpy(tags->tag, L"beginning");
-	tags->next = NULL;
+	// Pre-parse all page tags once
+	page_tags **parsed_pages = NULL;
+	int page_count = 0;
+
+	// Count pages and allocate array
+	for (pp_page *p = pages; p != NULL; p = p->next) {
+		page_count++;
+	}
+
+	parsed_pages = malloc(page_count * sizeof(page_tags*));
+	int parsed_count = 0;
+
+	// Parse all page tags
+	for (pp_page *p = pages; p != NULL; p = p->next) {
+		page_tags *parsed = parse_page_tags(p);
+		if (parsed) {
+			parsed_pages[parsed_count++] = parsed;
+		}
+	}
+
+	// Create hash table for unique tags
+	hash_table *unique_tags = create_hash_table();
+
+	// Build unique tag set using hash table (O(1) lookups)
+	for (int i = 0; i < parsed_count; i++) {
+		for (int j = 0; j < parsed_pages[i]->tag_count; j++) {
+			wchar_t *tag = parsed_pages[i]->tags[j];
+			hash_add(unique_tags, tag);  // Only adds if not already present
+		}
+	}
+
+	printf("=> found %d unique tags, sorting...\n", unique_tags->key_count);
+
+	// Sort tags using qsort (O(n log n))
+	qsort(unique_tags->keys, unique_tags->key_count, sizeof(wchar_t*), compare_wchar_strings);
+
+	printf("=> generating tag index pages (0/%d)", unique_tags->key_count);
+	fflush(stdout);  // Ensure output appears immediately
 
 	wchar_t *tag_output = malloc(123456 * sizeof(wchar_t));
 	wcscpy(tag_output, site->header);
@@ -107,51 +350,31 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 	wcscat(tag_output, L"<h3>View as: <a href=\"/s/\">scroll</a> | tag index</h3>\n");
 
 	wcscat(tag_output, L"<h2>Tag Index</h2>\n<ul>\n");
-
-        for (pp_page *p = pages; p != NULL ; p = p->next) {
-		// FIXME: explode_tags should be changed so that it works here.
-		// copy tag list to a new string because wcstok() will modify it.
-		wchar_t *tk, *tag_temp = malloc((wcslen(p->tags) + 32) * sizeof(wchar_t));
-		wcscpy(tag_temp, p->tags);
-
-		wchar_t *t = wcstok(tag_temp, L",", &tk);
-
-		if (!t) {
-			free(tag_temp);
-			continue;
-		}
-
-		while (t) {
-			if (first) {
-				// avoid iterating through the list while there's just empty/garbage allocated memory in the first item
-				wcscpy(tags->tag, t);
-				first = false;
-			}
-			if (!tag_list_contains(t, tags)) {
-				append_tag(t, tags);
-			}
-			t = wcstok(NULL, L",", &tk);
-		}
-		free(tag_temp);
-	}
-
-	sort_tag_list(tags);
 	
 	bool in_list = false;
 
 	// Prepare the output canvas for an index of all the pages tagged with a given term
-	for (tag_dict *t = tags; t != NULL ; t = t->next) {
-		wchar_t *single_tag_index_output = malloc(65536 * sizeof(wchar_t)); 
+	for (int tag_idx = 0; tag_idx < unique_tags->key_count; tag_idx++) {
+		wchar_t *current_tag = unique_tags->keys[tag_idx];
+
+		// Progress indicator - update every 100 tags or at significant milestones
+		if ((tag_idx + 1) % 100 == 0 || tag_idx + 1 == unique_tags->key_count) {
+			printf("\r=> generating tag index pages (%d/%d)", tag_idx + 1, unique_tags->key_count);
+			fflush(stdout);
+		}
+
+		wchar_t *single_tag_index_output = malloc(65536 * sizeof(wchar_t));
 		wcscpy(single_tag_index_output, site->header);
 		wcscat(single_tag_index_output, L"<h2>Pages tagged \"");
-		wcscat(single_tag_index_output, t->tag);
+		wcscat(single_tag_index_output, current_tag);
 		wcscat(single_tag_index_output, L"\"</h2>\n<ul>\n");
 
 		wcscat(tag_output, L"<li><b>");
-		wcscat(tag_output, t->tag);
+		wcscat(tag_output, current_tag);
 		wcscat(tag_output, L"</b></li>\n");
-		for (pp_page *p = pages ; p != NULL ; p = p->next) {
-			if (page_is_tagged(p, t->tag)) {	
+		for (int i = 0; i < parsed_count; i++) {
+			if (page_has_tag(parsed_pages[i], current_tag)) {
+				pp_page *p = parsed_pages[i]->page;	
 				if (!in_list) {
 					wcscat(tag_output, L"<ul>\n");
 					in_list = true;
@@ -194,18 +417,18 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 		char *tag_destination = malloc(wcslen(site->base_dir) + 64);
 		strcpy(tag_destination, char_convert(site->base_dir));
 		strcat(tag_destination, "t/");
-		strcat(tag_destination, char_convert(t->tag));
+		strcat(tag_destination, char_convert(current_tag));
 		strcat(tag_destination, ".html");
 
 		// Build URL for this individual tag page
 		char *base_url_str = char_convert(site->base_url);
-		char *tag_str = char_convert(t->tag);
+		char *tag_str = char_convert(current_tag);
 		char *tag_url_str = malloc(256);
 		snprintf(tag_url_str, 256, "%st/%s.html", base_url_str, tag_str);
 		wchar_t *tag_url = wchar_convert(tag_url_str);
-		
+
 		// Apply common token replacements
-		single_tag_index_output = apply_common_tokens(single_tag_index_output, site, tag_url, t->tag);
+		single_tag_index_output = apply_common_tokens(single_tag_index_output, site, tag_url, current_tag);
 		
 		free(base_url_str);
 		free(tag_str);
@@ -216,10 +439,20 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 		free(tag_destination);
 		free(single_tag_index_output);
 	}
+
+	printf("\n=> tag index generation complete\n");
+
 	wcscat(tag_output, L"</ul>\n");
 	wcscat(tag_output, L"<hr>\n");
 	wcscat(tag_output, site->footer);
-	free(tags);
+	// Cleanup pre-parsed page data
+	for (int i = 0; i < parsed_count; i++) {
+		free_page_tags(parsed_pages[i]);
+	}
+	free(parsed_pages);
+
+	// Cleanup hash table
+	free_hash_table(unique_tags);
 
 	// Build URL for main tag index
 	wchar_t *tag_index_url = malloc(256 * sizeof(wchar_t));
