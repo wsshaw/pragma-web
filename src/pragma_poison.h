@@ -238,7 +238,7 @@ void parse_site_markdown(pp_page* page_list);
 char* char_convert(const wchar_t* w);
 site_info* load_site_yaml(char* path); 
 wchar_t* replace_substring(wchar_t *str, const wchar_t *find, const wchar_t *replace);
-void write_single_page(pp_page* page, char* path);
+void write_single_page(pp_page* page, char* path, wchar_t* html_content);
 void strip_terminal_newline(wchar_t *s, char *t);
 wchar_t* explode_tags(wchar_t* input);
 wchar_t* legible_date(time_t when);

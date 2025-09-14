@@ -20,9 +20,11 @@
  *  wchar_t* (heap-allocated HTML buffer on success; NULL on error)
  */
 wchar_t* build_single_page(pp_page* page, site_info* site) {
-	if (!page || !site)
+	if (!page || !site) {
+		if (PRAGMA_DEBUG) ("=> error: no page/site in build_single_page, page = %s, site = %s", !page?"no":"yes", !site?"no":"yes");
 		return NULL;
-
+	}
+		
 	// figure out where this page lives in the world
 	//also, FIXME: smells that we just use this as is; string_from_int() can return null
 	wchar_t *link_filename = string_from_int(page->date_stamp);	
@@ -38,7 +40,6 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	// Try to make reasonable assumptions about the memory to allocate: page, header, footer, some wiggle room.
 	size_t j = (wcslen(page->content) + wcslen(site->header) + wcslen(site->footer) + 1024) * sizeof(wchar_t);
 	wchar_t *page_output = malloc(j);
-
 	wchar_t *share_image = malloc(128 * sizeof(wchar_t));
 
 	if (page->icon) {
@@ -63,6 +64,7 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	wchar_t *next_href = NULL;
 
 	if (previous_id) {
+		wprintf("=> has previous id %ls", previous_id);
 		prev_href = malloc((wcslen(previous_id) + 6) * sizeof(wchar_t));
 		if (prev_href) {
 			swprintf(prev_href, wcslen(previous_id) + 6, L"%ls.html", previous_id);
@@ -70,6 +72,7 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	}
 
 	if (next_id) {
+		wprintf("=> has next id %ls", next_id);
 		next_href = malloc((wcslen(next_id) + 6) * sizeof(wchar_t));
 		if (next_href) {
 			swprintf(next_href, wcslen(next_id) + 6, L"%ls.html", next_id);

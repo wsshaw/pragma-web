@@ -108,6 +108,9 @@ int validate_options(pragma_options *opts) {
         return -1;
     }
 
+	/** In general, pragma is not going to create directories: need to improve messaging and
+	 * write some documentation around this fact, but it won't try to diagnose permissions issues etc.
+	 */
     // Validate source directory
     if (!check_dir(opts->source_dir, S_IRUSR)) {
         printf("Error: source directory '%s' does not exist or is not readable\n", opts->source_dir);
@@ -232,6 +235,7 @@ int main(int argc, char *argv[]) {
         printf("=> DRY RUN MODE: No files will be written\n");
     }
 
+	printf("=> load = %d", load_mode);
     // Load the site sources
     pp_page* pages = load_site(load_mode, opts.source_dir, since_time);
 
@@ -261,7 +265,7 @@ int main(int argc, char *argv[]) {
         while (current_page != NULL) {
             wchar_t *page_html = build_single_page(current_page, config);
             if (page_html) {
-                write_single_page(current_page, posts_output_directory);
+                write_single_page(current_page, posts_output_directory, page_html);
                 free(page_html);
             }
             current_page = current_page->next;

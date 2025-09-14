@@ -386,12 +386,57 @@ pp_page* load_site( int operation, char* directory, time_t since_time ) {
 	return head;
 }
 /**
- * write_single_page(): stub/placeholder for function to renderin a single page HTML output.
- **/
-
-void write_single_page(pp_page* page, char *path) {
-	if (!page || !path)
+ * write_single_page(): Write HTML content for a single page to disk.
+ *
+ * Takes a page and its pre-built HTML content and writes it to the appropriate
+ * file in the posts directory. The filename is based on the page's date_stamp.
+ *
+ * arguments:
+ *  pp_page *page (page metadata; must not be NULL)
+ *  char *path (posts output directory path; must not be NULL)
+ *  wchar_t *html_content (pre-built HTML content to write; must not be NULL)
+ *
+ * returns:
+ *  void
+ */
+void write_single_page(pp_page* page, char *path, wchar_t* html_content) {
+	if (!page || !path || !html_content)
 		return;
+
+	// Get the filename based on date_stamp (same logic as build_single_page)
+	wchar_t *filename = string_from_int(page->date_stamp);
+	if (!filename) {
+		printf("Error: could not generate filename for page\n");
+		return;
+	}
+
+	// Build full output path: path + filename + .html
+	size_t full_path_len = strlen(path) + wcslen(filename) + 10; // ".html" + null + buffer
+	char *full_path = malloc(full_path_len);
+	if (!full_path) {
+		printf("Error: could not allocate memory for page path\n");
+		free(filename);
+		return;
+	}
+
+	// Convert filename to char* for path construction
+	char *filename_char = char_convert(filename);
+	if (!filename_char) {
+		printf("Error: could not convert filename to char\n");
+		free(filename);
+		free(full_path);
+		return;
+	}
+
+	snprintf(full_path, full_path_len, "%s/%s.html", path, filename_char);
+
+	// Write the HTML content to file
+	write_file_contents(full_path, html_content);
+
+	// Cleanup
+	free(filename);
+	free(filename_char);
+	free(full_path);
 }
 
 /**
