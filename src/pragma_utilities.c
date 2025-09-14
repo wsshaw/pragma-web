@@ -915,8 +915,9 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 	output = replace_substring(output, L"{BACK}", L"");
 	output = replace_substring(output, L"{FORWARD}", L"");
 	output = replace_substring(output, L"{TITLE}", L"");
-	output = replace_substring(output, L"{TAGS}", L"");
-	output = replace_substring(output, L"{DATE}", L"");
+	// Note: {TAGS} and {DATE} are handled by individual page builders
+	// output = replace_substring(output, L"{TAGS}", L"");
+	// output = replace_substring(output, L"{DATE}", L"");
 	output = replace_substring(output, L"{MAIN_IMAGE}", site->default_image);
 	output = replace_substring(output, L"{SITE_NAME}", site->site_name);
 	

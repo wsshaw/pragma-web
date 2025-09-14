@@ -24,7 +24,6 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 		if (PRAGMA_DEBUG) ("=> error: no page/site in build_single_page, page = %s, site = %s", !page?"no":"yes", !site?"no":"yes");
 		return NULL;
 	}
-		
 	// figure out where this page lives in the world
 	//also, FIXME: smells that we just use this as is; string_from_int() can return null
 	wchar_t *link_filename = string_from_int(page->date_stamp);	
@@ -64,7 +63,7 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	wchar_t *next_href = NULL;
 
 	if (previous_id) {
-		wprintf("=> has previous id %ls", previous_id);
+		//wprintf("=> has previous id %ls", previous_id);
 		prev_href = malloc((wcslen(previous_id) + 6) * sizeof(wchar_t));
 		if (prev_href) {
 			swprintf(prev_href, wcslen(previous_id) + 6, L"%ls.html", previous_id);
@@ -72,7 +71,7 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	}
 
 	if (next_id) {
-		wprintf("=> has next id %ls", next_id);
+		//wprintf("=> has next id %ls", next_id);
 		next_href = malloc((wcslen(next_id) + 6) * sizeof(wchar_t));
 		if (next_href) {
 			swprintf(next_href, wcslen(next_id) + 6, L"%ls.html", next_id);
@@ -85,22 +84,10 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	free(next_href);
 
 	// Use template system to render the complete page
-	wchar_t *templated_page = render_page_with_template(page, site);
-	if (templated_page) {
-		// Free the pre-allocated buffer and use the template result
-		free(page_output);
-		page_output = templated_page;
-	} else {
-		// Fallback to manual construction if template fails
-		wcscpy(page_output, site->header);
-		wcscat(page_output, L"<div class=\"post_card\"><div class=\"post_head\"><div class=\"post_icon\"><img class=\"icon\" alt=\"[icon]\" src=\"/img/icons/");
-		wcscat(page_output, page->icon);
-		wcscat(page_output, L"\"></div>\n");
-		wcscat(page_output, L"<div class=\"post_title\">{TITLE}</div>\n");
-		wcscat(page_output, L"{DATE}\n{TAGS}</div>\n");
-		wcscat(page_output, page->content);
-		wcscat(page_output, L"</div>\n");
-		wcscat(page_output, site->footer);
+	page_output = render_page_with_template(page, site);
+	if (!page_output) {
+		wprintf(L"Error: template rendering failed for page '%ls'\n", page->title);
+		return NULL;
 	} 
 
 	// Replace the {magic tokens}
@@ -132,9 +119,15 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	page_output = replace_substring(page_output, L"{TITLE}", title_element);
 	free(title_element);
 
-	wchar_t* tag_element = explode_tags(page->tags);
-	page_output = replace_substring(page_output, L"{TAGS}", tag_element);
-	free(tag_element);
+	//printf("DEBUG: About to call explode_tags with tags: %ls\n", page->tags ? page->tags : L"[NULL]");
+
+	// Check if {TAGS} token exists in page_output before replacement
+	if (wcsstr(page_output, L"{TAGS}")) {
+		wchar_t* tag_element = explode_tags(page->tags);
+		page_output = replace_substring(page_output, L"{TAGS}", tag_element);
+		free(tag_element);
+	} else {
+	}
 
 	wchar_t *formatted_date = wrap_with_element(legible_date(page->date_stamp), L"<i>", L"</i><br>");
 	page_output = replace_substring(page_output, L"{DATE}", formatted_date);

@@ -56,7 +56,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	int pages_processed = 0;
 	
 	// Track buffer usage to prevent overflow
-	size_t current_length = wcslen(index_output);
+	// size_t current_length = wcslen(index_output); // Unused for now
 
 	// Find the right spot in the linked list:
 	for (pp_page *current = pages; current != NULL; current = current->next) {

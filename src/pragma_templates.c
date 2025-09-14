@@ -317,11 +317,16 @@ wchar_t* template_process_loop(wchar_t *template, template_data *data) {
 
             if (item_with_url) {
                 // Append to expanded content
-                size_t new_size = wcslen(expanded_content) + wcslen(item_with_url) + 1;
+                size_t comma_space_len = (i < data->tag_count - 1) ? 2 : 0; // ", " for non-last items
+                size_t new_size = wcslen(expanded_content) + wcslen(item_with_url) + comma_space_len + 1;
                 wchar_t *new_expanded = realloc(expanded_content, new_size * sizeof(wchar_t));
                 if (new_expanded) {
                     expanded_content = new_expanded;
                     wcscat(expanded_content, item_with_url);
+                    // Add comma and space after each tag except the last one
+                    if (i < data->tag_count - 1) {
+                        wcscat(expanded_content, L", ");
+                    }
                 }
                 free(item_with_url);
             }

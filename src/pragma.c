@@ -262,14 +262,21 @@ int main(int argc, char *argv[]) {
     if (!opts.dry_run) {
         // Build individual pages
         pp_page *current_page = pages;
+        int page_count = 0;
         while (current_page != NULL) {
+            printf("=> Building page %d: %ls (tags: %ls)\n", ++page_count,
+                   current_page->title ? current_page->title : L"[no title]",
+                   current_page->tags ? current_page->tags : L"[no tags]");
             wchar_t *page_html = build_single_page(current_page, config);
             if (page_html) {
                 write_single_page(current_page, posts_output_directory, page_html);
                 free(page_html);
+            } else {
+                printf("=> ERROR: build_single_page returned NULL for page %d\n", page_count);
             }
             current_page = current_page->next;
         }
+        printf("=> Built %d individual pages\n", page_count);
 
         // Build index
         if (config->index_size > 0) {

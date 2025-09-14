@@ -142,7 +142,6 @@ wchar_t* render_index_item_with_template(pp_page *page, site_info *site) {
     if (!data) return NULL;
 
     // Handle content clipping at #MORE
-    wchar_t *processed_content = data->content;
     wchar_t *more_delimiter = wcsstr(data->content, L"#MORE");
     bool has_more = (more_delimiter != NULL);
 
@@ -165,7 +164,6 @@ wchar_t* render_index_item_with_template(pp_page *page, site_info *site) {
 
                     free(data->content);
                     data->content = content_with_link;
-                    processed_content = content_with_link;
                 }
                 free(read_more);
             }

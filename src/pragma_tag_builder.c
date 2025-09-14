@@ -17,7 +17,8 @@
 *  wchar_t* (heap-allocated HTML string on success; may return a copy of input on error)
 */
 wchar_t* explode_tags(wchar_t* input) {
-	if (!input) 
+	// printf("DEBUG: in explode_tags with input\n"); // Debug if needed
+	if (!input)
 		return NULL;
 
 	// copy the input somewhere so wcstok() doesn't modify it
@@ -39,18 +40,30 @@ wchar_t* explode_tags(wchar_t* input) {
 
 	wchar_t *output = malloc(4096 * sizeof(wchar_t));
 	wcscpy(output, L"");
+	bool first_tag = true;
 	while (t) {
-	//	strip_terminal_newline(t, NULL);
-		wcscat(output, L"<a href=\"/t/");
-		wcscat(output, t);
-		wcscat(output, L".html\">");
-		wcscat(output, t);
-		wcscat(output, L"</a>");
+		// printf("DEBUG: processing token\n"); // Debug if needed
+
+		// Trim leading and trailing whitespace from the tag
+		while (*t && iswspace(*t)) t++; // Skip leading whitespace
+		wchar_t *end = t + wcslen(t) - 1;
+		while (end > t && iswspace(*end)) *end-- = L'\0'; // Remove trailing whitespace
+
+		if (*t) { // Only process non-empty tags
+			if (!first_tag) {
+				wcscat(output, L", ");
+				// printf("DEBUG: added comma\n"); // Debug if needed
+			}
+			first_tag = false;
+
+			wcscat(output, L"<a href=\"/t/");
+			wcscat(output, t);
+			wcscat(output, L".html\">");
+			wcscat(output, t);
+			wcscat(output, L"</a>");
+		}
 
 		t = wcstok(NULL, L",", &tkn);
-		if (t) {
-			wcscat(output, L", ");
-		}
 	}
 	free(in);
 
