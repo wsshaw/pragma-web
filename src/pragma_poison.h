@@ -13,6 +13,7 @@
 #include <locale.h>
 #include <stddef.h>
 #include <time.h>
+#include <unistd.h>  // for getopt()
 
 // UTF-8 string type for filesystem operations
 typedef char* utf8_path;
@@ -316,3 +317,15 @@ void buffer_pool_init_global(void);
 void buffer_pool_cleanup_global(void);
 safe_buffer* buffer_pool_get_global(void);
 void buffer_pool_return_global(safe_buffer *buf);
+
+// Command-line options structure
+typedef struct {
+    char *source_dir;
+    char *output_dir;
+    bool create_site;
+    bool force_all;
+    bool updated_only;
+    bool new_only;
+    bool dry_run;
+    bool show_help;
+} pragma_options;

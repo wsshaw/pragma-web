@@ -1,14 +1,145 @@
 #include "pragma_poison.h"
 
 /**
+ * cleanup_buffer_pool(): Clean up global buffer pool at program exit.
+ */
+void cleanup_buffer_pool(void) {
+	buffer_pool_cleanup_global();
+}
+
+/**
+ * parse_arguments(): Parse command-line arguments using getopt.
+ *
+ * arguments:
+ *  int argc (argument count)
+ *  char *argv[] (argument vector)
+ *  pragma_options *opts (options structure to populate)
+ *
+ * returns:
+ *  int (0 on success, -1 on error)
+ */
+int parse_arguments(int argc, char *argv[], pragma_options *opts) {
+    int option;
+
+    // Initialize options to defaults
+    memset(opts, 0, sizeof(pragma_options));
+
+    // Parse options using getopt
+    while ((option = getopt(argc, argv, "s:o:c:funhd")) != -1) {
+        switch (option) {
+            case 's':
+                opts->source_dir = optarg;
+                break;
+            case 'o':
+                opts->output_dir = optarg;
+                break;
+            case 'c':
+                opts->create_site = true;
+                opts->output_dir = optarg; // -c takes a directory argument
+                break;
+            case 'f':
+                opts->force_all = true;
+                break;
+            case 'u':
+                opts->updated_only = true;
+                break;
+            case 'n':
+                opts->new_only = true;
+                break;
+            case 'd':
+                opts->dry_run = true;
+                break;
+            case 'h':
+                opts->show_help = true;
+                break;
+            case '?':
+                // getopt prints error message for unknown options
+                return -1;
+            default:
+                return -1;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * validate_options(): Validate parsed command-line options.
+ *
+ * arguments:
+ *  pragma_options *opts (parsed options)
+ *
+ * returns:
+ *  int (0 if valid, -1 if invalid)
+ */
+int validate_options(pragma_options *opts) {
+    // Handle immediate actions first
+    if (opts->show_help) {
+        usage();
+        return 1; // Special return code for help (should exit successfully)
+    }
+
+    if (opts->create_site) {
+        if (!opts->output_dir) {
+            printf("Error: -c requires a directory argument\n");
+            printf("Usage: pragma -c [destination directory]\n");
+            return -1;
+        }
+        // Validate directory exists and is writable
+        if (!check_dir(opts->output_dir, S_IWUSR)) {
+            printf("Error: directory '%s' does not exist or is not writable\n", opts->output_dir);
+            printf("Please create the directory and/or adjust permissions\n");
+            return -1;
+        }
+        return 2; // Special return code for create site (should exit after creation)
+    }
+
+    // For normal operation, we need both source and output
+    if (!opts->source_dir) {
+        printf("Error: must specify source directory with -s\n");
+        printf("       or create new site with -c [directory]\n");
+        usage();
+        return -1;
+    }
+
+    if (!opts->output_dir) {
+        printf("Error: must specify output directory with -o\n");
+        printf("       (or -c to create new site)\n");
+        return -1;
+    }
+
+    // Validate source directory
+    if (!check_dir(opts->source_dir, S_IRUSR)) {
+        printf("Error: source directory '%s' does not exist or is not readable\n", opts->source_dir);
+        printf("To create a new site, use: pragma -c [directory]\n");
+        return -1;
+    }
+
+    // Validate output directory
+    if (!check_dir(opts->output_dir, S_IWUSR)) {
+        printf("Error: output directory '%s' does not exist or is not writable\n", opts->output_dir);
+        return -1;
+    }
+
+    // Validate conflicting options
+    if (opts->force_all && opts->updated_only) {
+        printf("Error: cannot specify both -f (force all) and -u (updated only)\n");
+        return -1;
+    }
+
+    if (opts->updated_only && opts->new_only) {
+        printf("Error: cannot specify both -u (updated only) and -n (new only)\n");
+        return -1;
+    }
+
+    return 0; // Valid for normal operation
+}
+
+/**
  * main(): Entry point for the `pragma web` static site generator.
  *
- * Parses CLI arguments, validates source/output directories, and dispatches
- * site-building operations. 
- *  - Create a new site with -c
- *  - Load site configuration and sources with -s
- *  - Generate output into a specified directory with -o
- *  - Building indices, scroll, tag index, and individual pages
+ * Parses CLI arguments using getopt, validates options, and dispatches
+ * site-building operations.
  *
  * arguments:
  *  int   argc (number of command-line arguments)
@@ -17,15 +148,8 @@
  * returns:
  *  int (EXIT_SUCCESS or EXIT_FAILURE)
  */
-/**
- * cleanup_buffer_pool(): Clean up global buffer pool at program exit.
- */
-void cleanup_buffer_pool(void) {
-	buffer_pool_cleanup_global();
-}
-
 int main(int argc, char *argv[]) {
-	// setlocale() needs to be called asap so that Unicode is handled properly; change as needed
+	// setlocale() needs to be called asap so that Unicode is handled properly
 	setlocale(LC_CTYPE, "en_US.UTF-8");
 
 	// Initialize global buffer pool for unified buffer management
@@ -34,310 +158,169 @@ int main(int argc, char *argv[]) {
 	// Register cleanup function for automatic cleanup at exit
 	atexit(cleanup_buffer_pool);
 
-	// some significant locations and options we need to keep track of at startup
-	char *pragma_source_directory, *pragma_output_directory, *posts_output_directory;
-	bool source_specified = false;
-	bool destination_specified = false;
-	bool dry_run_specified = false;
-	bool force_all_specified = false;
-	bool updated_only = false;
-	bool create_site_specified = false;
+    pragma_options opts;
+    char *posts_output_directory;
 
-	// need at least some kind of argument because there's no default action
-	if ( argc == 1 ) {
+	// Show usage if no arguments provided
+	if (argc == 1) {
 		usage();
-		exit(EXIT_FAILURE); 
-	}
-
-	for (int i = 0; i < argc; i++) {
-		if (strcmp(argv[i], "-s") == 0) 
-			source_specified = true;
-		else if (strcmp(argv[i], "-o") == 0)
-			destination_specified = true;
-		else if (strcmp(argv[i], "-c") == 0)
-			create_site_specified = true;
-	}
-
-	// Handle the arguments that govern our behavior.  The flag logic is:
-	// 
-	// We must have either (-s && -o) || (-c)
-	// if we have (-s && -o)
-	//	source and output confirmed; check mode flag and act accordingly
-	// if we have (-s || -o)
-	//	warn user that this isn't going to work because we need both, exit
-	// else if we have (-c)
-	//	create new site, exit
-	//
-	// There are libraries that can handle all of this stuff; a possible TODO would be to find one
-	// and implement it here -- I'm doing a lot of logical grunt work that could be streamlined.
-	// (The technical debt to pay down is shaped like getopts.)
-
-	if (!source_specified) {
-		printf("=> Error: must specify site directory with -s\n");
-		exit(EXIT_FAILURE);
-	} else if (!source_specified && !create_site_specified) {
-		printf("=> Error: must either specify source directory (-s) or create new site (-c)\n");
 		exit(EXIT_FAILURE);
 	}
 
-	for (int i = 0; i < argc; i++) {
-		// There's no default value for source/output, and output isn't specified in the config
-		// file to allow for various staging possibilities/temporary setups.  So they need to be
-		// specified here or in whatever script calls pragma builder.
-		if (strcmp(argv[i], "-s") == 0) {
-			if (i + 1 < argc) {
-				// Does the source directory exist?  Is it readable?
-				if (!check_dir(argv[i+1], S_IRUSR)) {
-					printf("=> Error: source directory (%s) does not exist or is not readable.\n", argv[i+1]);
-					printf("=> To create a new site, use pragma -c /dest, where /dest is the directory in which\n");
-					printf("=> you'd like to keep the site sources.  Then edit /dest/pragma_config.yml and try again.\n");
-					exit(EXIT_FAILURE);
-				} else {
-					pragma_source_directory = argv[i + 1];
-					printf("=> Using source directory %s\n", pragma_source_directory); 
-					source_specified = true;
-					++i;
-				}
-			} else {
-				printf("! Error: no directory specified after -s.\n");
-				exit(EXIT_FAILURE);
-			}
-		} else if (strcmp(argv[i], "-o") == 0) {
-			if (i + 1 < argc) {
-				// Does the output directory exist?  Is it writable?
-				if (!check_dir(argv[i+1], S_IWUSR)) {
-					printf("! Error: output directory (%s) does not exist or is not writable.\n", argv[i+1]);
-					exit(EXIT_FAILURE);
-				} else {
-					pragma_output_directory = argv[i + 1];
-					printf("=> Using output directory %s\n", pragma_output_directory);
-					destination_specified = true;
-					posts_output_directory = malloc(strlen(pragma_output_directory) + strlen(SITE_POSTS) + 64); //save space for filename; FIXME
-					if (posts_output_directory == NULL ) {
-						printf("! Error: can't allocate memory for string representing the output path...\n");
-						exit(EXIT_FAILURE);
-					}
-					
-					// Figure out the posts directory, given the site base output dir....
-					strcpy(posts_output_directory, pragma_output_directory);
-					// ...and add trailing / if it's not there.
-					strcat(posts_output_directory, pragma_output_directory[strlen(pragma_output_directory)-1] != '/' ? "/" : "");
-					strcat(posts_output_directory, SITE_POSTS);	
-					++i;
-				}
-			} else {
-				printf("Error: no output directory specified after -o.\n");
-				exit(EXIT_FAILURE);
-			}
-		} else if (strcmp(argv[i], "-c") == 0) {
-			if (i > 1) {
-				if (PRAGMA_DEBUG)
-					printf("=> debug => (not in first)");
-			}
-			if (i + 1 < argc) {
-				// Create a new site. We won't try to make a directory that doesn't exist, though.
-				if (!check_dir(argv[i+1], S_IWUSR)) {
-					printf("=> Error: the specified directory (%s) does not exist or is not writable.\n", argv[i+1]);
-					printf("=> Please create the directory and/or adjust permissions to at least 600.\n");
-					exit(EXIT_FAILURE);
-				} else {
-					// Ok, we found a directory we can write to.  Set up the basics of the site.
-					build_new_pragma_site(argv[i+1]);
-					exit(EXIT_SUCCESS);
-				}
-			} else {
-				printf("Usage: %s -c [destination directory]\n", argv[0]);
-				exit(EXIT_SUCCESS);
-			}
-		// TODO: Implement the logic for these operations (force rebuild, updated files only, dry run)
-		} else if (strcmp(argv[i], "-f") == 0) {
-			force_all_specified = true;
-		} else if (strcmp(argv[i], "-u") == 0) {
-			updated_only = true;
-		} else if (strcmp(argv[i], "-n") == 0) {
-		} else if (strcmp(argv[i], "-h") == 0) {
-			usage();
-			exit(EXIT_SUCCESS);
-		} else {
-			// Skip unknown arguments (including argv[0])
-			continue;
-		}
+    // Parse command-line arguments
+    if (parse_arguments(argc, argv, &opts) != 0) {
+        exit(EXIT_FAILURE);
+    }
 
-	}
+    // Validate options and handle immediate actions
+    int validation_result = validate_options(&opts);
+    if (validation_result == -1) {
+        exit(EXIT_FAILURE);
+    } else if (validation_result == 1) {
+        // Help was shown
+        exit(EXIT_SUCCESS);
+    } else if (validation_result == 2) {
+        // Create site and exit
+        printf("=> Creating new pragma site in %s\n", opts.output_dir);
+        build_new_pragma_site(opts.output_dir);
+        exit(EXIT_SUCCESS);
+    }
 
-	// We learned about a source but don't know where to put the output, so fall back on default.
-    if (source_specified && !destination_specified) {
-		pragma_output_directory = pragma_source_directory;
-		printf("=> Using default output directory %s\n", pragma_output_directory);
-		posts_output_directory = malloc(strlen(pragma_output_directory) + strlen(SITE_POSTS) + 64); 
-		if (posts_output_directory == NULL ) {
-			printf("! Error: can't allocate memory for string representing the output path...\n");
-			exit(EXIT_FAILURE);
-		}
-		// Figure out the posts directory, given the site base output dir
-		strcpy(posts_output_directory, pragma_output_directory);
-		strcat(posts_output_directory, pragma_output_directory[strlen(pragma_output_directory)-1] != '/' ? "/" : "");
-		strcat(posts_output_directory, SITE_POSTS);
-	}
+    // At this point we have valid source and output directories
+    printf("=> Using source directory %s\n", opts.source_dir);
+    printf("=> Using output directory %s\n", opts.output_dir);
 
-	site_info* config = load_site_yaml(pragma_source_directory);
-	
-	// If this evaluates to true, something went wrong above--no config or memory/file permission problems
-	if (config == NULL) {
-		printf("! Error: Can't proceed without site configuration! Aborting.\n");
-		exit(EXIT_FAILURE);
-	}
+    // Set up posts output directory
+    posts_output_directory = malloc(strlen(opts.output_dir) + strlen(SITE_POSTS) + 64);
+    if (posts_output_directory == NULL) {
+        printf("Error: can't allocate memory for posts output path\n");
+        exit(EXIT_FAILURE);
+    }
 
-	wcscpy(config->base_dir, wchar_convert(pragma_source_directory));
-	wprintf(L"%s\n", config->base_dir);
+    // Build posts directory path
+    strcpy(posts_output_directory, opts.output_dir);
+    strcat(posts_output_directory, opts.output_dir[strlen(opts.output_dir)-1] != '/' ? "/" : "");
+    strcat(posts_output_directory, SITE_POSTS);
 
-	// Load the site sources from the specified directory
-	printf("base: %s\n", pragma_source_directory);
-	
-	// Determine operation mode and get last run time if needed
-	int load_operation = LOAD_EVERYTHING;
-	time_t last_run_time = 0;
-	
-	if (updated_only) {
-		load_operation = LOAD_UPDATED_ONLY;
-		last_run_time = get_last_run_time(pragma_source_directory);
-		printf("=> -u flag specified: only processing files modified since %ld\n", (long)last_run_time);
-	}
-	
-	pp_page* page_list = load_site( load_operation, pragma_source_directory, last_run_time );	
-	char *icons_directory = char_convert(config->icons_dir); 
+    // Load site configuration
+    site_info* config = load_site_yaml(opts.source_dir);
+    if (config == NULL) {
+        printf("Error: Can't proceed without site configuration! Aborting.\n");
+        free(posts_output_directory);
+        exit(EXIT_FAILURE);
+    }
 
-	// load the list of site icons and store them in config->site_icons; assign them
-	load_site_icons(pragma_source_directory, icons_directory, config);
-	assign_icons(page_list, config);
+    wcscpy(config->base_dir, wchar_convert(opts.source_dir));
+    wprintf(L"%s\n", config->base_dir);
 
-	// Ensure that the list of sources is sorted by date, with the newest content first
-	sort_site(&page_list);
+    // Determine loading mode based on options
+    int load_mode = LOAD_EVERYTHING;
+    time_t since_time = 0;
 
-	// Process those sources: parse the markdown content...
-	parse_site_markdown(page_list);
+    if (opts.updated_only) {
+        load_mode = LOAD_UPDATED_ONLY;
+        since_time = get_last_run_time(opts.source_dir);
+        printf("=> Loading files updated since last run\n");
+    } else if (opts.new_only) {
+        // TODO: Implement new-only mode
+        printf("=> New-only mode not yet implemented, loading everything\n");
+    } else if (opts.force_all) {
+        printf("=> Force rebuilding all files\n");
+    }
 
-	// ...and build the indices
-	int num_pages = 0;
-	for (pp_page *y = page_list ; y != NULL ; y = y->next ) {
-		num_pages++;
-	} 
-	int num_indices = ((num_pages + 1) / config->index_size) + 1;
-	printf("=> processed %d page sources; will generate %d indices.\n", num_pages == 0 ? 0 : num_pages + 1, num_indices);
+    if (opts.dry_run) {
+        printf("=> DRY RUN MODE: No files will be written\n");
+    }
 
-	wchar_t *main_index;
-	char index_name[4];
+    // Load the site sources
+    pp_page* pages = load_site(load_mode, opts.source_dir, since_time);
 
-	for (int i = 0 ; i < num_indices ; i++ ) {
-		printf("index build loop entered\n");
-		main_index = build_index(page_list, config, i);	
-		printf("passed build_index() call\n");
-		snprintf(index_name, 4, "%d", i);
-		printf("%s", index_name);
-		
-		// Only write to disk if we got a valid index
-		if (main_index != NULL) {
-			// write indices to disk
-			printf("allocating space for destination filename:\n");
-			char *index_destination = malloc(strlen(pragma_output_directory) + 20);
-			printf("passed malloc() for destination filename\n");
-			
-			strcpy(index_destination, pragma_output_directory);
-			strcat(index_destination, "index");
-			strcat(index_destination, i > 0 ? index_name : ""); 
-			strcat(index_destination, ".html");
-			write_file_contents(index_destination, main_index);
+    if (pages == NULL) {
+        printf("Error: no pages found or loaded\n");
+        free(posts_output_directory);
+        free_site_info(config);
+        exit(EXIT_FAILURE);
+    }
 
-			// clean up from index generation
-			free(index_destination);
-			free(main_index);
-		} else {
-			printf("=> Skipping index %d (no content to write)\n", i);
-		}
-	}
+    // Process markdown content
+    parse_site_markdown(pages);
 
-	// generate the scroll
-	wchar_t *main_scroll = build_scroll(page_list, config);
-	printf("=> Generated scoll.\n");
-	
-	// write scroll to disk
-	char *scroll_destination = malloc(strlen(pragma_output_directory) + 20);
-	strcpy(scroll_destination, pragma_output_directory);
-	strcat(scroll_destination, "s/index.html");
-	write_file_contents(scroll_destination, main_scroll);
-	
-	printf("=> Scroll written successfully to disk.\n");
-	free(scroll_destination);
-	free(main_scroll);
+    // Sort pages by date
+    sort_site(&pages);
 
-	// generate RSS feed
-	wchar_t *rss_feed = build_rss(page_list, config);
-	printf("=> Generated RSS feed.\n");
-	
-	// Only write RSS feed if we got valid content
-	if (rss_feed != NULL) {
-		// write RSS feed to disk (in root directory)
-		char *rss_destination = malloc(strlen(pragma_output_directory) + 20);
-		strcpy(rss_destination, pragma_output_directory);
-		strcat(rss_destination, "feed.xml");
-		write_file_contents(rss_destination, rss_feed);
-		
-		printf("=> RSS feed written successfully to disk.\n");
-		free(rss_destination);
-		free(rss_feed);
-	} else {
-		printf("=> Skipping RSS feed (no content to write)\n");
-	}
+    // Load site icons
+    load_site_icons(opts.output_dir, char_convert(config->icons_dir), config);
 
-	// generate tag index
-	wchar_t *tag_index = build_tag_index(page_list, config);
-	printf("=> Generated tag index.\n");
+    // Assign icons to pages
+    assign_icons(pages, config);
 
-	// Only write tag index if we got valid content
-	if (tag_index != NULL) {
-		char *tag_destination = malloc(strlen(pragma_output_directory) + 20);
-		strcpy(tag_destination, pragma_output_directory);
-		strcat(tag_destination, "t/index.html");
-		write_file_contents(tag_destination, tag_index);
+    // Build the site (unless dry run)
+    if (!opts.dry_run) {
+        // Build individual pages
+        pp_page *current_page = pages;
+        while (current_page != NULL) {
+            wchar_t *page_html = build_single_page(current_page, config);
+            if (page_html) {
+                write_single_page(current_page, posts_output_directory);
+                free(page_html);
+            }
+            current_page = current_page->next;
+        }
 
-		printf("=> Tag index successfully written to disk.\n");
-		free(tag_destination);
-		free(tag_index);
-	} else {
-		printf("=> Skipping tag index (no content to write)\n");
-	}
-	
-	char *destination_file;
+        // Build index
+        if (config->index_size > 0) {
+            wchar_t *index_html = build_index(pages, config, 0);
+            if (index_html) {
+                char index_path[1024];
+                snprintf(index_path, sizeof(index_path), "%s/index.html", opts.output_dir);
+                write_file_contents(index_path, index_html);
+                free(index_html);
+            }
+        }
 
-	// We've generated a site at this point: write it to disk
-	for (pp_page *current = page_list; current != NULL; current = current->next) {
+        // Build scroll (chronological index)
+        if (config->build_scroll) {
+            wchar_t *scroll_html = build_scroll(pages, config);
+            if (scroll_html) {
+                char scroll_path[1024];
+                snprintf(scroll_path, sizeof(scroll_path), "%s/s/index.html", opts.output_dir);
+                write_file_contents(scroll_path, scroll_html);
+                free(scroll_html);
+            }
+        }
 
-		// First, assemble the required filename
-		destination_file = malloc(256);		
-		strcpy(destination_file, posts_output_directory);
-		wchar_t *d = string_from_int(current->date_stamp);
-		char *ds = char_convert(d);
-		strcat(destination_file, ds);
-		free(ds); free(d);
-		strip_terminal_newline(NULL, destination_file);
-		strcat(destination_file, ".html");
+        // Build tag indices
+        if (config->build_tags) {
+            wchar_t *tag_html = build_tag_index(pages, config);
+            if (tag_html) {
+                char tag_path[1024];
+                snprintf(tag_path, sizeof(tag_path), "%s/t/index.html", opts.output_dir);
+                write_file_contents(tag_path, tag_html);
+                free(tag_html);
+            }
+        }
 
-		// Then call build_single-page() to convert the current page to HTML...
-		wchar_t *the_page = build_single_page(current, config);
-		// ...and write the output to disk, freeing memory we had to allocate.
-		write_file_contents(destination_file, the_page);
-		free(the_page);
-		free(destination_file);
-	}
+        // Build RSS feed
+        wchar_t *rss_xml = build_rss(pages, config);
+        if (rss_xml) {
+            char rss_path[1024];
+            snprintf(rss_path, sizeof(rss_path), "%s/feed.xml", opts.output_dir);
+            write_file_contents(rss_path, rss_xml);
+            free(rss_xml);
+        }
 
-	// clean up from site generation
-	wprintf(L"Generated site output. Cleaning up...\n");
-	
-	// Update the last run time to mark successful completion
-	update_last_run_time(pragma_source_directory);
-	
-	free_page_list(page_list);
-	free(posts_output_directory);
-	free_site_info(config);
-	wprintf(L"Done.\n");
+        // Update last run time
+        update_last_run_time(opts.source_dir);
+
+        printf("=> Site generation complete\n");
+    } else {
+        printf("=> Dry run complete - no files written\n");
+    }
+
+    // Cleanup
+    free(posts_output_directory);
+    free_page_list(pages);
+    free_site_info(config);
+
+    exit(EXIT_SUCCESS);
 }
