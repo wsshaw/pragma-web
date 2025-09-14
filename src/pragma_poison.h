@@ -44,7 +44,7 @@ wchar_t* utf8_to_wchar(const utf8_path utf8_str);
                 
 #define PRAGMA_DEBUG	0
 
-#define PRAGMA_USAGE	"Usage: pragma -s [source] -o [output]\n\nwhere [source] is the site source directory and [output] is where you want the rendered site.\n\n\t-f: regenerate all html for all nodes\n\t-s: dry run, status report only\n\t-u: regenerate html only for nodes whose source was modified since last successful run\n\t-n: generate html output for new nodes (i.e., created since last run)\n\t-h: show this 'help'\n\nPlease see README.txt for usage details and examples.\n\n"
+#define PRAGMA_USAGE	"Usage: pragma -s [source] -o [output]\n\nwhere [source] is the site source directory and [output] is where you want the rendered site.\n\n\t-f: regenerate all html for all nodes\n\t-d: dry run, status report only\n\t-u: regenerate html only for nodes whose source was modified since last successful run\n\t-n: generate html output for new nodes (i.e., created since last run)\n\t-h: show this 'help'\n\nPlease see README.txt for usage details and examples.\n\n"
 
 /**
 * Default file contents when creating a new site.  Some of these strings are hideous, but I prefer
@@ -107,49 +107,49 @@ L"<p>"
 #define DEFAULT_FOOTER	L"</div></body><script src=\"https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js\"></script><link href=\"https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css\" rel=\"stylesheet\"><script>const lightbox = GLightbox();</script>"\
 L"<link rel=\"stylesheet\" href=\"/p.css\"></html>"
 
-// Default template files for new sites
-#define DEFAULT_TEMPLATE_POST_CARD L"<div class=\"post_card\">\\n"\
-L"  <div class=\"post_head\">\\n"\
-L"    <div class=\"post_icon\">\\n"\
-L"      <img class=\"icon\" alt=\"[icon]\" src=\"/img/icons/{ICON}\">\\n"\
-L"    </div>\\n"\
-L"    <div class=\"post_title\">\\n"\
-L"      <h3><a href=\"{POST_URL}\">{TITLE}</a></h3>\\n"\
-L"    </div>\\n"\
-L"    <i>Posted on {DATE}</i><br>\\n"\
-L"    <!-- IF has_tags -->\\n"\
-L"    <!-- LOOP tags -->\\n"\
-L"    <a href=\"{TAG_URL}\">{TAG}</a>\\n"\
-L"    <!-- END LOOP -->\\n"\
-L"    <!-- END IF -->\\n"\
-L"  </div>\\n"\
-L"  <div class=\"post_in_index\">\\n"\
-L"    {CONTENT}\\n"\
-L"  </div>\\n"\
-L"</div>\\n"
+// Default template files for new sites (card for use in any context, standalone page, navigation widgets)
+#define DEFAULT_TEMPLATE_POST_CARD L"<div class=\"post_card\">\n"\
+L"  <div class=\"post_head\">\n"\
+L"    <div class=\"post_icon\">\n"\
+L"      <img class=\"icon\" alt=\"[icon]\" src=\"/img/icons/{ICON}\">\n"\
+L"    </div>\n"\
+L"    <div class=\"post_title\">\n"\
+L"      <h3><a href=\"{POST_URL}\">{TITLE}</a></h3>\n"\
+L"    </div>\n"\
+L"    <i>Posted on {DATE}</i><br>\n"\
+L"    <!-- IF has_tags -->\n"\
+L"    <!-- LOOP tags -->\n"\
+L"    <a href=\"{TAG_URL}\">{TAG}</a>\n"\
+L"    <!-- END LOOP -->\n"\
+L"    <!-- END IF -->\n"\
+L"  </div>\n"\
+L"  <div class=\"post_in_index\">\n"\
+L"    {CONTENT}\n"\
+L"  </div>\n"\
+L"</div>\n"
 
-#define DEFAULT_TEMPLATE_SINGLE_PAGE L"<div class=\"post_card\">\\n"\
-L"  <div class=\"post_head\">\\n"\
-L"    <div class=\"post_icon\">\\n"\
-L"      <img class=\"icon\" alt=\"[icon]\" src=\"/img/icons/{ICON}\">\\n"\
-L"    </div>\\n"\
-L"    <div class=\"post_title\">\\n"\
-L"      <h3>{TITLE}</h3>\\n"\
-L"    </div>\\n"\
-L"    <i>Posted on {DATE}</i><br>\\n"\
-L"    <!-- IF has_tags -->\\n"\
-L"    <!-- LOOP tags -->\\n"\
-L"    <a href=\"{TAG_URL}\">{TAG}</a>\\n"\
-L"    <!-- END LOOP -->\\n"\
-L"    <!-- END IF -->\\n"\
-L"  </div>\\n"\
-L"  {CONTENT}\\n"\
-L"</div>\\n"
+#define DEFAULT_TEMPLATE_SINGLE_PAGE L"<div class=\"post_card\">\n"\
+L"  <div class=\"post_head\">\n"\
+L"    <div class=\"post_icon\">\n"\
+L"      <img class=\"icon\" alt=\"[icon]\" src=\"/img/icons/{ICON}\">\n"\
+L"    </div>\n"\
+L"    <div class=\"post_title\">\n"\
+L"      <h3>{TITLE}</h3>\n"\
+L"    </div>\n"\
+L"    <i>Posted on {DATE}</i><br>\n"\
+L"    <!-- IF has_tags -->\n"\
+L"    <!-- LOOP tags -->\n"\
+L"    <a href=\"{TAG_URL}\">{TAG}</a>\n"\
+L"    <!-- END LOOP -->\n"\
+L"    <!-- END IF -->\n"\
+L"  </div>\n"\
+L"  {CONTENT}\n"\
+L"</div>\n"
 
-#define DEFAULT_TEMPLATE_NAVIGATION L"<!-- IF has_navigation -->\\n"\
-L"<!-- IF has_next --><a href=\"{NEXT_URL}\">older</a><!-- END IF -->\\n"\
-L"<!-- IF has_prev --><!-- IF has_next --> | <!-- END IF --><a href=\"{PREV_URL}\">newer</a><!-- END IF -->\\n"\
-L"<!-- END IF -->\\n"
+#define DEFAULT_TEMPLATE_NAVIGATION L"<!-- IF has_navigation -->\n"\
+L"<!-- IF has_next --><a href=\"{NEXT_URL}\">older</a><!-- END IF -->\n"\
+L"<!-- IF has_prev --><!-- IF has_next --> | <!-- END IF --><a href=\"{PREV_URL}\">newer</a><!-- END IF -->\n"\
+L"<!-- END IF -->\n"
 
 #define DEFAULT_TEMPLATE_INDEX_ITEM DEFAULT_TEMPLATE_POST_CARD\
 
