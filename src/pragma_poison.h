@@ -106,7 +106,53 @@ L"{TAGS}"\
 L"<p>"
 
 #define DEFAULT_FOOTER	L"</div></body><script src=\"https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js\"></script><link href=\"https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css\" rel=\"stylesheet\"><script>const lightbox = GLightbox();</script>"\
-L"<link rel=\"stylesheet\" href=\"/p.css\"></html>"\
+L"<link rel=\"stylesheet\" href=\"/p.css\"></html>"
+
+// Default template files for new sites
+#define DEFAULT_TEMPLATE_POST_CARD L"<div class=\"post_card\">\\n"\
+L"  <div class=\"post_head\">\\n"\
+L"    <div class=\"post_icon\">\\n"\
+L"      <img class=\"icon\" alt=\"[icon]\" src=\"/img/icons/{ICON}\">\\n"\
+L"    </div>\\n"\
+L"    <div class=\"post_title\">\\n"\
+L"      <h3><a href=\"{POST_URL}\">{TITLE}</a></h3>\\n"\
+L"    </div>\\n"\
+L"    <i>Posted on {DATE}</i><br>\\n"\
+L"    <!-- IF has_tags -->\\n"\
+L"    <!-- LOOP tags -->\\n"\
+L"    <a href=\"{TAG_URL}\">{TAG}</a>\\n"\
+L"    <!-- END LOOP -->\\n"\
+L"    <!-- END IF -->\\n"\
+L"  </div>\\n"\
+L"  <div class=\"post_in_index\">\\n"\
+L"    {CONTENT}\\n"\
+L"  </div>\\n"\
+L"</div>\\n"
+
+#define DEFAULT_TEMPLATE_SINGLE_PAGE L"<div class=\"post_card\">\\n"\
+L"  <div class=\"post_head\">\\n"\
+L"    <div class=\"post_icon\">\\n"\
+L"      <img class=\"icon\" alt=\"[icon]\" src=\"/img/icons/{ICON}\">\\n"\
+L"    </div>\\n"\
+L"    <div class=\"post_title\">\\n"\
+L"      <h3>{TITLE}</h3>\\n"\
+L"    </div>\\n"\
+L"    <i>Posted on {DATE}</i><br>\\n"\
+L"    <!-- IF has_tags -->\\n"\
+L"    <!-- LOOP tags -->\\n"\
+L"    <a href=\"{TAG_URL}\">{TAG}</a>\\n"\
+L"    <!-- END LOOP -->\\n"\
+L"    <!-- END IF -->\\n"\
+L"  </div>\\n"\
+L"  {CONTENT}\\n"\
+L"</div>\\n"
+
+#define DEFAULT_TEMPLATE_NAVIGATION L"<!-- IF has_navigation -->\\n"\
+L"<!-- IF has_next --><a href=\"{NEXT_URL}\">older</a><!-- END IF -->\\n"\
+L"<!-- IF has_prev --><!-- IF has_next --> | <!-- END IF --><a href=\"{PREV_URL}\">newer</a><!-- END IF -->\\n"\
+L"<!-- END IF -->\\n"
+
+#define DEFAULT_TEMPLATE_INDEX_ITEM DEFAULT_TEMPLATE_POST_CARD\
 
 #define LOAD_EVERYTHING		0
 #define LOAD_METADATA		1

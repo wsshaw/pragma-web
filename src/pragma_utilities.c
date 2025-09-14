@@ -7,10 +7,12 @@
 const char *pragma_directories[] = {
 	"/dat/",
 	"/img/",
+	"/img/icons/",
 	"/a/",
 	"/c/",
 	"/t/",
-	"/s/"
+	"/s/",
+	"/templates/"
 };
 
 /**
@@ -26,8 +28,12 @@ const char *pragma_basic_files[] = {
 	"/p.css",
 	"/j.js",
 	"/a/index.html",
-	"_header.html",
-	"_footer.html"
+	"/_header.html",
+	"/_footer.html",
+	"/templates/post_card.html",
+	"/templates/single_page.html",
+	"/templates/navigation.html",
+	"/templates/index_item.html"
 };
 
 /**
@@ -40,7 +46,11 @@ const wchar_t *pragma_basic_file_skeletons[] = {
 	DEFAULT_JAVASCRIPT,
 	DEFAULT_ABOUT_PAGE,
 	DEFAULT_HEADER,
-	DEFAULT_FOOTER
+	DEFAULT_FOOTER,
+	DEFAULT_TEMPLATE_POST_CARD,
+	DEFAULT_TEMPLATE_SINGLE_PAGE,
+	DEFAULT_TEMPLATE_NAVIGATION,
+	DEFAULT_TEMPLATE_INDEX_ITEM
 };
 
 /**
@@ -53,7 +63,11 @@ enum pragma_file_info {
 	JAVASCRIPT,
 	ABOUT,
 	HEADER,
-	FOOTER
+	FOOTER,
+	TEMPLATE_POST_CARD,
+	TEMPLATE_SINGLE_PAGE,
+	TEMPLATE_NAVIGATION,
+	TEMPLATE_INDEX_ITEM
 };
 
 /**

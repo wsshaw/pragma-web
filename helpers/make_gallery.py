@@ -17,11 +17,11 @@ THUMB_SIZE = (256, 256)  # max width/height
 def generate_thumbnails(directory):
     """Generate thumbnails for each image in the directory."""
     for filename in os.listdir(directory):
-        # Skip non-image files
+        # Skip non-image files, stick with jpg and png for now
         if not filename.lower().endswith(('.jpg', '.jpeg', '.png')):
             continue
 
-        # Skip files that are already thumbnails
+        # Skip files that are already thumbnails or claim to be
         if filename.startswith('thumb'):
             continue
 
