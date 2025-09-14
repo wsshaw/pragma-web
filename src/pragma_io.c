@@ -204,10 +204,16 @@ site_info* load_site_yaml(char* path) {
 	config->base_url = malloc(256 * sizeof(wchar_t));
 	config->footer = malloc(4096 * sizeof(wchar_t));
 	config->tagline = malloc(256);
+	config->license = malloc(256 * sizeof(wchar_t));
 	config->default_image = malloc(256 * sizeof(wchar_t));
 	config->icons_dir = malloc(256 * sizeof(wchar_t));
 	config->base_dir = malloc(256 * sizeof(wchar_t));
 	config->icons = malloc(123456); // uhhh
+
+	// Initialize boolean fields with default values
+	config->include_js = false;
+	config->build_tags = false;
+	config->build_scroll = false;
 
 	while (fgetws(line, MAX_LINE_LENGTH, file) != NULL) {
 		// trim newlines first
@@ -291,12 +297,37 @@ site_info* load_site_yaml(char* path) {
 		}
 		else if (wcsstr(line, L"tagline:") != NULL)
 			wcscpy(config->tagline, line + wcslen(L"tagline:"));
+		else if (wcsstr(line, L"license:") != NULL)
+			wcscpy(config->license, line + wcslen(L"license:"));
+		else if (wcsstr(line, L"js:") != NULL) {
+			wchar_t *value = line + wcslen(L"js:");
+			config->include_js = (wcsstr(value, L"yes") != NULL);
+		}
+		else if (wcsstr(line, L"build_tags:") != NULL) {
+			wchar_t *value = line + wcslen(L"build_tags:");
+			config->build_tags = (wcsstr(value, L"yes") != NULL);
+		}
+		else if (wcsstr(line, L"build_scroll:") != NULL) {
+			wchar_t *value = line + wcslen(L"build_scroll:");
+			config->build_scroll = (wcsstr(value, L"yes") != NULL);
+		}
 		else // not a known or supported config option
 			wprintf(L"bypassing unknown configuration option %ls.\n", line);
 	}
 
 	fclose(file);
-	printf("passed file close in yaml parser");
+
+	// Print concise configuration summary
+	printf("Site configuration: %ls, index_size=%d",
+	       config->site_name ? config->site_name : L"[no name]",
+	       config->index_size);
+
+	// Add feature flags
+	if (config->include_js) printf(", js");
+	if (config->build_tags) printf(", tags");
+	if (config->build_scroll) printf(", scroll");
+	printf("\n");
+
 	return config;
 }
 

@@ -182,7 +182,8 @@ typedef struct site_info {
 	wchar_t *footer;
 	int index_size;
 	int read_more;
-	wchar_t *tagline;	
+	wchar_t *tagline;
+	wchar_t *license;
 	wchar_t *icons_dir;
 	wchar_t *base_dir;
 	char **icons;

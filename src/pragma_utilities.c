@@ -854,6 +854,7 @@ void free_site_info(site_info *config) {
 	free(config->base_url);
 	free(config->footer);
 	free(config->tagline);
+	free(config->license);
 	free(config->default_image);
 	free(config->icons_dir);
 	free(config->base_dir);
