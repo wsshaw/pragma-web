@@ -107,21 +107,43 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 		return NULL;
 	} 
 
-	// Replace the {magic tokens}
-	page_output = replace_substring(page_output, L"{PAGETITLE}", page->title);
-	page_output = replace_substring(page_output, L"{FORWARD}", navigation_links ? navigation_links : L"");
-	page_output = replace_substring(page_output, L"{BACK}", L""); // BACK now handled by FORWARD navigation 
-	page_output = replace_substring(page_output, L"{MAIN_IMAGE}", share_image);
-	page_output = replace_substring(page_output, L"{SITE_NAME}", site->site_name);
-	page_output = replace_substring(page_output, L"#MORE", L"");
+	// Replace the {magic tokens} using template system
+	wchar_t *temp;
+
+	temp = template_replace_token(page_output, L"PAGETITLE", page->title);
+	free(page_output);
+	page_output = temp;
+
+	temp = template_replace_token(page_output, L"FORWARD", navigation_links ? navigation_links : L"");
+	free(page_output);
+	page_output = temp;
+
+	temp = template_replace_token(page_output, L"BACK", L""); // BACK now handled by FORWARD navigation
+	free(page_output);
+	page_output = temp;
+
+	temp = template_replace_token(page_output, L"MAIN_IMAGE", share_image);
+	free(page_output);
+	page_output = temp;
+
+	temp = template_replace_token(page_output, L"SITE_NAME", site->site_name);
+	free(page_output);
+	page_output = temp;
+
+	// Remove #MORE delimiter (not a {TOKEN} so use replace_substring)
+	temp = replace_substring(page_output, L"#MORE", L"");
+	if (temp != page_output) {
+		free(page_output);
+		page_output = temp;
+	}
 	
 	// Add description for Open Graph and meta tags
 	wchar_t *description = get_page_description(page);
+	temp = template_replace_token(page_output, L"DESCRIPTION", description ? description : L"");
+	free(page_output);
+	page_output = temp;
 	if (description) {
-		page_output = replace_substring(page_output, L"{DESCRIPTION}", description);
 		free(description);
-	} else {
-		page_output = replace_substring(page_output, L"{DESCRIPTION}", L"");
 	}
 
 	// Free memory from string manufacturing; return page output
@@ -129,25 +151,35 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	free(next_id);
 	free(navigation_links);
 
-	page_output = replace_substring(page_output, L"{TITLE_FOR_META}", page->title);
-	page_output = replace_substring(page_output, L"{PAGE_URL}", page_url);
+	temp = template_replace_token(page_output, L"TITLE_FOR_META", page->title);
+	free(page_output);
+	page_output = temp;
+
+	temp = template_replace_token(page_output, L"PAGE_URL", page_url);
+	free(page_output);
+	page_output = temp;
 
 	wchar_t* title_element = html_heading(3, page->title, NULL);
-	page_output = replace_substring(page_output, L"{TITLE}", title_element);
+	temp = template_replace_token(page_output, L"TITLE", title_element);
+	free(page_output);
+	page_output = temp;
 	free(title_element);
 
 	//printf("DEBUG: About to call explode_tags with tags: %ls\n", page->tags ? page->tags : L"[NULL]");
 
-	// Check if {TAGS} token exists in page_output before replacement
-	if (wcsstr(page_output, L"{TAGS}")) {
-		wchar_t* tag_element = explode_tags(page->tags);
-		page_output = replace_substring(page_output, L"{TAGS}", tag_element);
+	// Replace TAGS token
+	wchar_t* tag_element = explode_tags(page->tags);
+	temp = template_replace_token(page_output, L"TAGS", tag_element ? tag_element : L"");
+	free(page_output);
+	page_output = temp;
+	if (tag_element) {
 		free(tag_element);
-	} else {
 	}
 
 	wchar_t *formatted_date = wrap_with_element(legible_date(page->date_stamp), L"<i>", L"</i><br>");
-	page_output = replace_substring(page_output, L"{DATE}", formatted_date);
+	temp = template_replace_token(page_output, L"DATE", formatted_date);
+	free(page_output);
+	page_output = temp;
 	free(formatted_date);
 
 	free(page_url);

@@ -312,14 +312,21 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 	if (!output || !site)
 		return output;
 
-	// Simple approach - just do the replacements like the original code
-	// Accept the memory leaks for now to avoid complex management issues
-	output = replace_substring(output, L"{BACK}", L"");
-	output = replace_substring(output, L"{FORWARD}", L"");
-	output = replace_substring(output, L"{TITLE}", L"");
+	// Use template system for token replacement with proper memory management
+	wchar_t *temp;
+
+	temp = template_replace_token(output, L"BACK", L"");
+	free(output);
+	output = temp;
+
+	temp = template_replace_token(output, L"FORWARD", L"");
+	free(output);
+	output = temp;
+
+	temp = template_replace_token(output, L"TITLE", L"");
+	free(output);
+	output = temp;
 	// Note: {TAGS} and {DATE} are handled by individual page builders
-	// output = replace_substring(output, L"{TAGS}", L"");
-	// output = replace_substring(output, L"{DATE}", L"");
 	// Build full URL for default image
 	wchar_t *full_default_image = malloc(512 * sizeof(wchar_t));
 	if (wcsstr(site->default_image, L"://")) {
@@ -335,17 +342,30 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 		}
 		wcscat(full_default_image, default_path);
 	}
-	output = replace_substring(output, L"{MAIN_IMAGE}", full_default_image);
+	temp = template_replace_token(output, L"MAIN_IMAGE", full_default_image);
+	free(output);
+	output = temp;
 	free(full_default_image);
-	output = replace_substring(output, L"{SITE_NAME}", site->site_name);
+
+	temp = template_replace_token(output, L"SITE_NAME", site->site_name);
+	free(output);
+	output = temp;
 
 	if (page_url) {
-		output = replace_substring(output, L"{PAGE_URL}", page_url);
+		temp = template_replace_token(output, L"PAGE_URL", page_url);
+		free(output);
+		output = temp;
 	}
 
 	const wchar_t *meta_title = page_title ? page_title : site->site_name;
-	output = replace_substring(output, L"{TITLE_FOR_META}", meta_title);
-	output = replace_substring(output, L"{PAGETITLE}", meta_title);
+
+	temp = template_replace_token(output, L"TITLE_FOR_META", meta_title);
+	free(output);
+	output = temp;
+
+	temp = template_replace_token(output, L"PAGETITLE", meta_title);
+	free(output);
+	output = temp;
 
 	return output;
 }
