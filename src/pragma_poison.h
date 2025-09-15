@@ -241,6 +241,7 @@ enum sort_types {
 
 pp_page* parse_file(const utf8_path filename);
 bool check_dir( const utf8_path p, int mode );
+wchar_t* build_url(const wchar_t *base_url, const wchar_t *path);
 void usage();
 void build_new_pragma_site( char *t );
 wchar_t *read_file_contents(const utf8_path path);

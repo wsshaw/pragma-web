@@ -91,16 +91,13 @@ template_data* template_data_from_page(pp_page *page, site_info *site) {
 
     // Generate URLs (full URLs for proper og:url metadata)
     if (page->source_filename) {
-        size_t url_len = wcslen(site->base_url) + wcslen(page->source_filename) + 20;
-        data->post_url = malloc(url_len * sizeof(wchar_t));
-        if (data->post_url) {
-            // Check if base_url ends with slash
-            bool needs_slash = (site->base_url[wcslen(site->base_url) - 1] != L'/');
-            if (needs_slash) {
-                swprintf(data->post_url, url_len, L"%ls/c/%ls.html", site->base_url, page->source_filename);
-            } else {
-                swprintf(data->post_url, url_len, L"%lsc/%ls.html", site->base_url, page->source_filename);
-            }
+        // Build path: "c/filename.html"
+        size_t path_len = wcslen(page->source_filename) + 10;
+        wchar_t *post_path = malloc(path_len * sizeof(wchar_t));
+        if (post_path) {
+            swprintf(post_path, path_len, L"c/%ls.html", page->source_filename);
+            data->post_url = build_url(site->base_url, post_path);
+            free(post_path);
         }
     }
 

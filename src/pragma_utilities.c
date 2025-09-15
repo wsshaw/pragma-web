@@ -49,6 +49,50 @@ bool is_valid_site(const utf8_path path) {
 	return true;
 }
 
+/**
+ * build_url(): Construct a URL by safely joining a base URL with a path.
+ *
+ * Handles slash normalization between base_url and path to avoid issues like
+ * "http://example.compath" or "http://example.com//path". Allocates memory
+ * that must be freed by the caller.
+ *
+ * arguments:
+ *  const wchar_t *base_url (base URL; must not be NULL)
+ *  const wchar_t *path (path to append; must not be NULL)
+ *
+ * returns:
+ *  wchar_t* (heap-allocated complete URL; NULL on error)
+ */
+wchar_t* build_url(const wchar_t *base_url, const wchar_t *path) {
+	if (!base_url || !path) return NULL;
+
+	size_t base_len = wcslen(base_url);
+	size_t path_len = wcslen(path);
+
+	// Allocate space for base + "/" + path + null terminator
+	wchar_t *url = malloc((base_len + path_len + 2) * sizeof(wchar_t));
+	if (!url) return NULL;
+
+	// Copy base URL
+	wcscpy(url, base_url);
+
+	// Check if we need to add a slash between base and path
+	bool base_has_slash = (base_len > 0 && base_url[base_len - 1] == L'/');
+	bool path_has_slash = (path_len > 0 && path[0] == L'/');
+
+	if (!base_has_slash && !path_has_slash) {
+		// Need to add slash: "http://example.com" + "path" -> "http://example.com/path"
+		wcscat(url, L"/");
+	} else if (base_has_slash && path_has_slash) {
+		// Remove one slash: "http://example.com/" + "/path" -> "http://example.com/path"
+		path++; // Skip the leading slash in path
+	}
+	// Otherwise: one has slash, one doesn't - perfect as-is
+
+	wcscat(url, path);
+	return url;
+}
+
 
 
 

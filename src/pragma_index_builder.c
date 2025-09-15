@@ -166,19 +166,13 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	}
 	
 	// Build full URL for default image
-	wchar_t *full_default_image = malloc(512 * sizeof(wchar_t));
+	wchar_t *full_default_image;
 	if (wcsstr(site->default_image, L"://")) {
 		// Already a full URL
-		wcscpy(full_default_image, site->default_image);
+		full_default_image = wcsdup(site->default_image);
 	} else {
-		// Make it a full URL
-		wcscpy(full_default_image, site->base_url);
-		// Remove leading slash if present since base_url should include trailing slash
-		const wchar_t *default_path = site->default_image;
-		if (*default_path == L'/') {
-			default_path++;
-		}
-		wcscat(full_default_image, default_path);
+		// Make it a full URL using utility function
+		full_default_image = build_url(site->base_url, site->default_image);
 	}
 
 	temp = template_replace_token(index_output, L"MAIN_IMAGE", full_default_image);
@@ -206,15 +200,14 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		index_output = temp;
 	}
 
-	wchar_t *actual_url = malloc(256 * sizeof(wchar_t));
-	wcscpy(actual_url, site->base_url);
-	wcscat(actual_url, L"index");
+	// Build index URL path
+	wchar_t index_path[64];
 	if (start_page > 0) {
-		wchar_t *page_num = string_from_int(start_page);
-		wcscat(actual_url, page_num);
-		free(page_num);
+		swprintf(index_path, 64, L"index%d.html", start_page);
+	} else {
+		wcscpy(index_path, L"index.html");
 	}
-	wcscat(actual_url, L".html");
+	wchar_t *actual_url = build_url(site->base_url, index_path);
 
 	temp = template_replace_token(index_output, L"PAGE_URL", actual_url);
 	if (temp) {

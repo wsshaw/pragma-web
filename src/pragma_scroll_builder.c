@@ -52,10 +52,8 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 		wcscat(empty_scroll, L"</div>\n");
 		wcscat(empty_scroll, site->footer);
 		
-		// Build scroll page URL  
-		wchar_t *scroll_url = malloc(256 * sizeof(wchar_t));
-		wcscpy(scroll_url, site->base_url);
-		wcscat(scroll_url, L"s/");
+		// Build scroll page URL
+		wchar_t *scroll_url = build_url(site->base_url, L"s/");
 		
 		// Apply common token replacements
 		empty_scroll = apply_common_tokens(empty_scroll, site, scroll_url, L"#pragma poison | all posts");
@@ -182,9 +180,7 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	}
 
 	// Build scroll page URL
-	wchar_t *scroll_url = malloc(256 * sizeof(wchar_t));
-	wcscpy(scroll_url, site->base_url);
-	wcscat(scroll_url, L"s/");
+	wchar_t *scroll_url = build_url(site->base_url, L"s/");
 
 	// Apply common token replacements
 	// Use "all posts" as page title - the template will combine it with site name
