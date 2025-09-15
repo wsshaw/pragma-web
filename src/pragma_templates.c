@@ -94,7 +94,13 @@ template_data* template_data_from_page(pp_page *page, site_info *site) {
         size_t url_len = wcslen(site->base_url) + wcslen(page->source_filename) + 20;
         data->post_url = malloc(url_len * sizeof(wchar_t));
         if (data->post_url) {
-            swprintf(data->post_url, url_len, L"%lsc/%ls.html", site->base_url, page->source_filename);
+            // Check if base_url ends with slash
+            bool needs_slash = (site->base_url[wcslen(site->base_url) - 1] != L'/');
+            if (needs_slash) {
+                swprintf(data->post_url, url_len, L"%ls/c/%ls.html", site->base_url, page->source_filename);
+            } else {
+                swprintf(data->post_url, url_len, L"%lsc/%ls.html", site->base_url, page->source_filename);
+            }
         }
     }
 
