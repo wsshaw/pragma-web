@@ -5,13 +5,17 @@
     </div>
     <div class="post_title">
       <h3>{TITLE}</h3>
+      <div class="post_metadata">
+        <i>Posted on {DATE}</i>
+        <!-- IF has_tags -->
+        <div class="post_tags">
+          <!-- LOOP tags -->
+          <a href="{TAG_URL}">{TAG}</a>
+          <!-- END LOOP -->
+        </div>
+        <!-- END IF -->
+      </div>
     </div>
-    <i>Posted on {DATE}</i><br>
-    <!-- IF has_tags -->
-    <!-- LOOP tags -->
-    <a href="{TAG_URL}">{TAG}</a>
-    <!-- END LOOP -->
-    <!-- END IF -->
   </div>
   {CONTENT}
 </div>

@@ -163,40 +163,55 @@ wchar_t* html_post_card_header(const wchar_t *icon_filename, const wchar_t *titl
 /**
  * html_navigation_links(): Create navigation links for prev/next pages.
  *
- * Generates navigation links with proper formatting.
+ * Generates navigation links with proper formatting and post titles.
  * Links are automatically escaped.
  *
  * arguments:
  *  const wchar_t *prev_href (previous page URL; may be NULL)
  *  const wchar_t *next_href (next page URL; may be NULL)
+ *  const wchar_t *prev_title (previous page title; may be NULL)
+ *  const wchar_t *next_title (next page title; may be NULL)
  *
  * returns:
  *  wchar_t* (heap-allocated navigation HTML; NULL on error)
  */
-wchar_t* html_navigation_links(const wchar_t *prev_href, const wchar_t *next_href) {
+wchar_t* html_navigation_links(const wchar_t *prev_href, const wchar_t *next_href,
+                              const wchar_t *prev_title, const wchar_t *next_title) {
     safe_buffer *buf = buffer_pool_get_global();
     if (!buf) return NULL;
 
+    safe_append(L"<nav class=\"post_navigation\">", buf);
     bool has_links = false;
 
-    if (prev_href) {
-        wchar_t *prev_link = html_link(prev_href, L"&laquo; previous", NULL);
+    if (prev_href && prev_title) {
+        safe_append(L"<div class=\"nav_prev\">", buf);
+        safe_append(L"<span class=\"nav_label\">&laquo; newer</span>", buf);
+        wchar_t *prev_link = html_link(prev_href, prev_title, NULL);
         if (prev_link) {
+            safe_append(L"<div class=\"nav_title\">", buf);
             safe_append(prev_link, buf);
-            safe_append(L" | ", buf);
+            safe_append(L"</div>", buf);
             free(prev_link);
             has_links = true;
         }
+        safe_append(L"</div>", buf);
     }
 
-    if (next_href) {
-        wchar_t *next_link = html_link(next_href, L"next &raquo;", NULL);
+    if (next_href && next_title) {
+        safe_append(L"<div class=\"nav_next\">", buf);
+        safe_append(L"<span class=\"nav_label\">older &raquo;</span>", buf);
+        wchar_t *next_link = html_link(next_href, next_title, NULL);
         if (next_link) {
+            safe_append(L"<div class=\"nav_title\">", buf);
             safe_append(next_link, buf);
+            safe_append(L"</div>", buf);
             free(next_link);
             has_links = true;
         }
+        safe_append(L"</div>", buf);
     }
+
+    safe_append(L"</nav>", buf);
 
     if (!has_links) {
         buffer_pool_return_global(buf);

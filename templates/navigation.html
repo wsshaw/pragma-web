@@ -1,4 +1,29 @@
-<!-- IF has_navigation -->
-<!-- IF has_next --><a href="{NEXT_URL}">older</a><!-- END IF -->
-<!-- IF has_prev --><!-- IF has_next --> | <!-- END IF --><a href="{PREV_URL}">newer</a><!-- END IF -->
+<!-- IF has_prev -->
+<nav class="post_navigation">
+  <div class="nav_prev">
+    <span class="nav_label">&laquo; newer</span>
+    <div class="nav_title">
+      <a href="{PREV_URL}">{PREV_TITLE}</a>
+    </div>
+  </div>
+  <!-- IF has_next -->
+  <div class="nav_next">
+    <span class="nav_label">older &raquo;</span>
+    <div class="nav_title">
+      <a href="{NEXT_URL}">{NEXT_TITLE}</a>
+    </div>
+  </div>
+  <!-- END IF -->
+</nav>
+<!-- END IF -->
+
+<!-- IF has_next_only -->
+<nav class="post_navigation">
+  <div class="nav_next">
+    <span class="nav_label">older &raquo;</span>
+    <div class="nav_title">
+      <a href="{NEXT_URL}">{NEXT_TITLE}</a>
+    </div>
+  </div>
+</nav>
 <!-- END IF -->

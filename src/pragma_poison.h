@@ -294,7 +294,8 @@ wchar_t* html_post_icon(const wchar_t *icon_filename);
 wchar_t* html_post_title(const wchar_t *title_content);
 wchar_t* html_post_card_header(const wchar_t *icon_filename, const wchar_t *title_content,
                                const wchar_t *date_content, const wchar_t *tags_content);
-wchar_t* html_navigation_links(const wchar_t *prev_href, const wchar_t *next_href);
+wchar_t* html_navigation_links(const wchar_t *prev_href, const wchar_t *next_href,
+                              const wchar_t *prev_title, const wchar_t *next_title);
 wchar_t* html_post_in_index(const wchar_t *content);
 wchar_t* html_read_more_link(const wchar_t *href);
 wchar_t* html_complete_post_card(const wchar_t *icon_filename, const wchar_t *title_content,
@@ -310,6 +311,8 @@ typedef struct {
     wchar_t *post_url;
     wchar_t *prev_url;
     wchar_t *next_url;
+    wchar_t *prev_title;
+    wchar_t *next_title;
     wchar_t *description;
 
     // Tag arrays
@@ -321,6 +324,7 @@ typedef struct {
     bool has_prev;
     bool has_next;
     bool has_navigation;
+    bool has_next_only;
     bool has_tags;
 } template_data;
 

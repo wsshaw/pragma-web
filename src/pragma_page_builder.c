@@ -93,7 +93,9 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 		}
 	}
 
-	wchar_t *navigation_links = html_navigation_links(prev_href, next_href);
+	wchar_t *navigation_links = html_navigation_links(prev_href, next_href,
+	                                                  page->prev ? page->prev->title : NULL,
+	                                                  page->next ? page->next->title : NULL);
 
 	free(prev_href);
 	free(next_href);

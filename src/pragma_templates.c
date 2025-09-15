@@ -35,6 +35,8 @@ void template_free(template_data *data) {
     free(data->content);
     free(data->prev_url);
     free(data->next_url);
+    free(data->prev_title);
+    free(data->next_title);
     free(data->post_url);
     free(data->description);
 
@@ -98,7 +100,7 @@ template_data* template_data_from_page(pp_page *page, site_info *site) {
         free(timestamp_str);
     }
 
-    // Navigation URLs
+    // Navigation URLs and titles
     if (page->prev) {
         wchar_t *prev_id = string_from_int(page->prev->date_stamp);
         if (prev_id) {
@@ -109,6 +111,7 @@ template_data* template_data_from_page(pp_page *page, site_info *site) {
             }
             free(prev_id);
         }
+        data->prev_title = page->prev->title ? wcsdup(page->prev->title) : NULL;
     }
 
     if (page->next) {
@@ -121,6 +124,7 @@ template_data* template_data_from_page(pp_page *page, site_info *site) {
             }
             free(next_id);
         }
+        data->next_title = page->next->title ? wcsdup(page->next->title) : NULL;
     }
 
     // Parse tags
@@ -170,6 +174,7 @@ template_data* template_data_from_page(pp_page *page, site_info *site) {
     data->has_prev = (data->prev_url != NULL);
     data->has_next = (data->next_url != NULL);
     data->has_navigation = data->has_prev || data->has_next;
+    data->has_next_only = data->has_next && !data->has_prev;
     data->has_tags = (data->tag_count > 0);
 
     return data;
@@ -375,7 +380,7 @@ wchar_t* template_process_conditionals(wchar_t *template, template_data *data) {
 
     // Process each conditional type (process nested conditions multiple times)
     const wchar_t *conditionals[] = {
-        L"has_navigation", L"has_tags", L"has_prev", L"has_next", NULL
+        L"has_navigation", L"has_tags", L"has_prev", L"has_next", L"has_next_only", NULL
     };
 
     // Process multiple times to handle nested conditions
@@ -409,6 +414,8 @@ wchar_t* template_process_conditionals(wchar_t *template, template_data *data) {
                     condition_true = data->has_prev;
                 } else if (wcscmp(conditionals[i], L"has_next") == 0) {
                     condition_true = data->has_next;
+                } else if (wcscmp(conditionals[i], L"has_next_only") == 0) {
+                    condition_true = data->has_next_only;
                 }
 
                 // Replace conditional block
@@ -491,12 +498,12 @@ wchar_t* apply_template(const char *template_path, template_data *data) {
 
     const wchar_t *tokens[] = {
         L"TITLE", L"DATE", L"ICON", L"CONTENT", L"POST_URL",
-        L"PREV_URL", L"NEXT_URL", L"DESCRIPTION", NULL
+        L"PREV_URL", L"NEXT_URL", L"PREV_TITLE", L"NEXT_TITLE", L"DESCRIPTION", NULL
     };
 
     const wchar_t *values[] = {
         data->title, data->date, data->icon, data->content, data->post_url,
-        data->prev_url, data->next_url, data->description
+        data->prev_url, data->next_url, data->prev_title, data->next_title, data->description
     };
 
     for (int i = 0; tokens[i]; i++) {
