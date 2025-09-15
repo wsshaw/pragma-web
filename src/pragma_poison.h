@@ -75,7 +75,7 @@ L"blockquote {\n  border:1px solid gray;\n  background-color:#eeeeee;\n  margin-
 L"<html lang=\"en\" prefix=\"og: https://ogp.me/ns#\">"\
 L"<head>"\
 L"<meta charset=\"utf-8\">"\
-L"<meta name=\"generator\" content=\"pragma-web_1.0.0\">"\
+L"<meta name=\"generator\" content=\"pragma-web\">"\
 L"<meta property=\"og:title\" content=\"{TITLE}\">"\
 L"<meta property=\"og:description\" content=\"{DESCRIPTION}\">"\
 L"<meta property=\"og:type\" content=\"article\">"\
@@ -122,8 +122,8 @@ L"#MORE\n\n"\
 L"Additional content after the #MORE tag appears only on individual post pages.\n"
 
 #define DEFAULT_ICON_SVG L"<svg width=\"64\" height=\"64\" xmlns=\"http://www.w3.org/2000/svg\">\n"\
-L"<rect width=\"64\" height=\"64\" fill=\"#666\" rx=\"8\"/>\n"\
-L"<text x=\"32\" y=\"40\" font-family=\"Arial\" font-size=\"24\" fill=\"white\" text-anchor=\"middle\">P</text>\n"\
+L"<rect width=\"64\" height=\"64\" fill=\"#f5f\" rx=\"8\"/>\n"\
+L"<text x=\"32\" y=\"40\" font-family=\"Arial\" font-size=\"24\" fill=\"white\" text-anchor=\"middle\">!</text>\n"\
 L"</svg>"
 
 // Default template files for new sites (card for use in any context, standalone page, navigation widgets)
@@ -179,6 +179,7 @@ L"<!-- END IF -->\n"
 
 #define MAX_MONTHLY_POSTS	128
 
+// TODO: why is this here again?
 #define EMPTY_ARRAY_FLAG	(1 << 0)
 
 #define SIZE_OF(array) ( sizeof((array)) / sizeof((array[0])) )
@@ -355,7 +356,7 @@ typedef struct {
     wchar_t *buffer;
     size_t size;
     size_t used;
-    bool auto_escape;  // Automatically escape HTML when appending
+    bool auto_escape;  // Automatically escape HTML when appending 
 } safe_buffer;
 
 typedef struct buffer_pool {
