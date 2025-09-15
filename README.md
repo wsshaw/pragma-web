@@ -48,6 +48,44 @@ If `-o` is omitted, output defaults to the data directory, and `index.html` will
 `tempaltes/post_card.html` same as index item by default, can be changed for use in other contexts
 `templates/single_page.html` template for a single HTML page of the site
 
+## Styling the pragma-web output
+You may want to change the default appearance of the site, which has minimal styling. pragma-web will generate HTML that includes the following CSS classes.
+
+**Core Layout:**
+  - `.main_body` - Container for the main content area
+  - `.post_card` - Container for each post (used in index, single pages, scroll)
+  - `.post_head` - Header section of each post containing icon and title
+  - `.post_body` - Body content area (for single pages)
+
+**Icon and Visual Elements:**
+  - `.post_icon` - Container for the post icon
+  - `.icon` - The actual icon image
+
+**Title and Metadata:**
+  - `.post_title` - Container for post title and metadata (currently styled with calc width and overflow handling)
+  - `.post_metadata` - Container for date and tags information
+  - `.post_tags` - Container for tag links
+
+**Content Areas:**
+  - `.post_in_index` - Content area for posts displayed in index pages (shows summary/truncated content)
+  - `.post_image_wrapper` - Wrapper for images (currently styled: centered, clear:both)
+  - `img.post` - Post images (currently styled: centered, max-width 75%, responsive)
+
+**Navigation:**
+  - `.post_navigation` - Container for prev/next navigation
+  - `.nav_prev` - Previous post navigation container
+  - `.nav_next` - Next post navigation container
+  - `.nav_label` - Navigation labels ("« newer", "older »")
+  - `.nav_title` - Titles of prev/next posts in navigation
+
+**Index and Feed Elements:**
+  - `.read_more` - "read more »" links in index pages
+  - `.foot` - Footer pagination area (currently styled: centered, 15% width, larger font)
+
+**Special Content:**
+  - `.gallery` - Image gallery containers (from markdown `!!directory` syntax)
+  - `.glightbox` - Lightbox gallery links (used by make_gallery.py helper)
+
 
 ## Notes on implementation
 - Wide-char parsing is enabled with `setlocale(LC_CTYPE, "en_US.UTF-8");` at the beginning of `main()`, and the argument to `setlocale()` should be changed for other locales (or better yet, I should move it to the configuration file).
@@ -60,3 +98,4 @@ If `-o` is omitted, output defaults to the data directory, and `index.html` will
 - Markdown: coverage is basic (no tables, fenced blocks, etc.)
 - Need to centralize error and status logging
 - Separation of concerns between rednering and assembly is way better than it was in the hacked-together prototype, but still could be refined
+- Performance testing on unrealistically large sites (50,000+ posts, 160k+ tags) has worked fine, but I need to optimize some expensive parts of tag index generation in particular. 

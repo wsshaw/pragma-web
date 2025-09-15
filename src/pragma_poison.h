@@ -86,6 +86,7 @@ L"<meta property=\"og:url\" content=\"{PAGE_URL}\">"\
 L"<meta name=\"description\" content=\"{DESCRIPTION}\">"\
 L"<title>#pragma poison | {PAGETITLE}</title>"\
 L"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"\
+L"<link rel=\"stylesheet\" href=\"/p.css\">"\
 L"<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">"\
 L"<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>"\
 L"<link href=\"https://fonts.googleapis.com/css2?family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&display=swap\" rel=\"stylesheet\">"\
@@ -101,11 +102,9 @@ L"<hr>"\
 L"<div class=\"main_body\">"\
 L"{TITLE}"\
 L"{DATE}"\
-L"{TAGS}"\
-L"<p>"
+L"{TAGS}"
 
-#define DEFAULT_FOOTER	L"</div></body><script src=\"https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js\"></script><link href=\"https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css\" rel=\"stylesheet\"><script>const lightbox = GLightbox();</script>"\
-L"<link rel=\"stylesheet\" href=\"/p.css\"></html>"
+#define DEFAULT_FOOTER	L"</div></body><script src=\"https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js\"></script><link href=\"https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css\" rel=\"stylesheet\"><script>const lightbox = GLightbox();</script></html>"
 
 #define DEFAULT_SAMPLE_POST L"Welcome to pragma!\n"\
 L"tags:welcome,sample\n"\
