@@ -27,11 +27,12 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	if (!site) 
 		return NULL;
 
-	// Figure out the high/low year bounds. Using tm_info structure from localtime().
+	// Find bounds and count posts in single pass
 	int min = INT_MAX, max = 0;
 	int c = 0, actual_year = 0;
 	struct tm *tm_info;
 
+	// First pass: just find min/max years and count posts
 	for (pp_page *p = pages; p != NULL ; p = p->next) {
 		tm_info = localtime(&p->date_stamp);
 		actual_year = tm_info->tm_year + 1900;
@@ -63,29 +64,27 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 		return empty_scroll;
 	}
 
-	// We use a straightforward array structure instead of, say, ***datestamp_list 
-	// to keep things readable and simple. The tradeoff is that it's less efficient
-	// in terms of memory usage and has an arbitrary built-in limit of 128 posts/mo.
-	// Update MAX_MONTHLY_POSTS as needed.
-	time_t calendar[(max - min) + 1][12][MAX_MONTHLY_POSTS];	
+	// Store direct pointers to posts instead of timestamps to avoid expensive lookups
+	// This changes from O(n²) to O(n) complexity for large datasets
+	pp_page* calendar[(max - min) + 1][12][MAX_MONTHLY_POSTS];
 
-	// Initialize the array with consistent dummy values (-1)
+	// Initialize the array with NULL pointers
 	for (int i = 0; i < (max - min) + 1 ; i++) {
 		for (int j = 0; j < 12 ; j++) {
 			for (int k = 0 ; k < MAX_MONTHLY_POSTS ; k++) {
-				calendar[i][j][k] = -1;
+				calendar[i][j][k] = NULL;
 			}
 		}
 	}
 
-	// organize the list of pages by year and month
+	// Second pass: organize posts into calendar structure
 	for (pp_page *p = pages; p != NULL; p = p->next) {
 		tm_info = localtime(&p->date_stamp);
 		actual_year = (tm_info->tm_year + 1900) - min;	// actual_year = array offset here
-		// Find the next available bucket to store this timestamp
+		// Find the next available bucket to store this post pointer
 		for (int i = 0 ; i < MAX_MONTHLY_POSTS; i++ ) {
-			if (calendar[actual_year][tm_info->tm_mon][i] == -1) {
-				calendar[actual_year][tm_info->tm_mon][i] = p->date_stamp;
+			if (calendar[actual_year][tm_info->tm_mon][i] == NULL) {
+				calendar[actual_year][tm_info->tm_mon][i] = p;
 				break;
 			}
 		}
@@ -114,11 +113,11 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 		wcscat(scroll_output, L"</h2>\n<ul>\n");
 		for (int j = 11 ; j > -1; j--) {
 			for (int k = 0; k < MAX_MONTHLY_POSTS ; k++) {
-				if (calendar[i][j][k] == -1) {
+				if (calendar[i][j][k] == NULL) {
 					break;
-				} 
-				
-				item = get_item_by_key(calendar[i][j][k], pages);
+				}
+
+				item = calendar[i][j][k]; // Direct pointer access - no expensive lookup!
 
 				if (k == 0) {
 	                		t = *localtime(&item->date_stamp);
@@ -153,7 +152,7 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 				wcscat(scroll_output, L"</li>\n");
 
 				// if this post is the last one for this month, end the list
-				if (calendar[i][j][k + 1] == -1) {
+				if (calendar[i][j][k + 1] == NULL) {
 					wcscat(scroll_output, L"</ul>\n");
 					break;
 				}
