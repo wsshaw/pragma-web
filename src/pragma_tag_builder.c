@@ -384,10 +384,10 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 				wcscat(single_tag_index_output, L"<li><a href=\"/c/");
 				wcscat(tag_output, L"<li><a href=\"/c/");
 				
-				wchar_t *link_filename = string_from_int(p->date_stamp);
-				wcscat(tag_output, link_filename);
-				wcscat(single_tag_index_output, link_filename);
-				free(link_filename);
+				if (p->source_filename) {
+					wcscat(tag_output, p->source_filename);
+					wcscat(single_tag_index_output, p->source_filename);
+				}
 
 				wcscat(single_tag_index_output, L".html\">");
 				wcscat(tag_output, L".html\">");

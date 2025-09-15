@@ -25,16 +25,18 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 		return NULL;
 	}
 	// figure out where this page lives in the world
-	//also, FIXME: smells that we just use this as is; string_from_int() can return null
-	wchar_t *link_filename = string_from_int(page->date_stamp);	
 	wchar_t *page_url = malloc(512 * sizeof(wchar_t));
+	if (!page_url) {
+		printf("Error: could not allocate memory for page URL\n");
+		return NULL;
+	}
 
 	wcscpy(page_url, site->base_url);
 	wcscat(page_url, L"c/");	// FIXME - this is a placeholder because content dir is hard-coded as char.
-	wcscat(page_url, link_filename);
+	if (page->source_filename) {
+		wcscat(page_url, page->source_filename);
+	}
 	wcscat(page_url, L".html");
-
-	free(link_filename);
 
 	// Try to make reasonable assumptions about the memory to allocate: page, header, footer, some wiggle room.
 	size_t j = (wcslen(page->content) + wcslen(site->header) + wcslen(site->footer) + 1024) * sizeof(wchar_t);
@@ -70,26 +72,22 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	}
 
 	// get links to previous and next posts, if available
-	wchar_t *next_id = page->next ? string_from_int(page->next->date_stamp) : NULL;
-	wchar_t *previous_id = page->prev ? string_from_int(page->prev->date_stamp) : NULL;
-
-	// build navigation links using the new component function
 	wchar_t *prev_href = NULL;
 	wchar_t *next_href = NULL;
 
-	if (previous_id) {
-		//wprintf("=> has previous id %ls", previous_id);
-		prev_href = malloc((wcslen(previous_id) + 6) * sizeof(wchar_t));
+	if (page->prev && page->prev->source_filename) {
+		size_t href_len = wcslen(page->prev->source_filename) + 6;
+		prev_href = malloc(href_len * sizeof(wchar_t));
 		if (prev_href) {
-			swprintf(prev_href, wcslen(previous_id) + 6, L"%ls.html", previous_id);
+			swprintf(prev_href, href_len, L"%ls.html", page->prev->source_filename);
 		}
 	}
 
-	if (next_id) {
-		//wprintf("=> has next id %ls", next_id);
-		next_href = malloc((wcslen(next_id) + 6) * sizeof(wchar_t));
+	if (page->next && page->next->source_filename) {
+		size_t href_len = wcslen(page->next->source_filename) + 6;
+		next_href = malloc(href_len * sizeof(wchar_t));
 		if (next_href) {
-			swprintf(next_href, wcslen(next_id) + 6, L"%ls.html", next_id);
+			swprintf(next_href, href_len, L"%ls.html", page->next->source_filename);
 		}
 	}
 
@@ -129,8 +127,6 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	}
 
 	// Free memory from string manufacturing; return page output
-	free(previous_id);
-	free(next_id);
 	free(navigation_links);
 
 	// Note: TITLE_FOR_META and PAGE_URL are already handled by apply_common_tokens()

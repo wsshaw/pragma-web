@@ -90,39 +90,29 @@ template_data* template_data_from_page(pp_page *page, site_info *site) {
     }
 
     // Generate URLs (full URLs for proper og:url metadata)
-    wchar_t *timestamp_str = string_from_int(page->date_stamp);
-    if (timestamp_str) {
-        size_t url_len = wcslen(site->base_url) + wcslen(timestamp_str) + 20;
+    if (page->source_filename) {
+        size_t url_len = wcslen(site->base_url) + wcslen(page->source_filename) + 20;
         data->post_url = malloc(url_len * sizeof(wchar_t));
         if (data->post_url) {
-            swprintf(data->post_url, url_len, L"%lsc/%ls.html", site->base_url, timestamp_str);
+            swprintf(data->post_url, url_len, L"%lsc/%ls.html", site->base_url, page->source_filename);
         }
-        free(timestamp_str);
     }
 
     // Navigation URLs and titles
-    if (page->prev) {
-        wchar_t *prev_id = string_from_int(page->prev->date_stamp);
-        if (prev_id) {
-            size_t url_len = wcslen(prev_id) + 10;
-            data->prev_url = malloc(url_len * sizeof(wchar_t));
-            if (data->prev_url) {
-                swprintf(data->prev_url, url_len, L"%ls.html", prev_id);
-            }
-            free(prev_id);
+    if (page->prev && page->prev->source_filename) {
+        size_t url_len = wcslen(page->prev->source_filename) + 10;
+        data->prev_url = malloc(url_len * sizeof(wchar_t));
+        if (data->prev_url) {
+            swprintf(data->prev_url, url_len, L"%ls.html", page->prev->source_filename);
         }
         data->prev_title = page->prev->title ? wcsdup(page->prev->title) : NULL;
     }
 
-    if (page->next) {
-        wchar_t *next_id = string_from_int(page->next->date_stamp);
-        if (next_id) {
-            size_t url_len = wcslen(next_id) + 10;
-            data->next_url = malloc(url_len * sizeof(wchar_t));
-            if (data->next_url) {
-                swprintf(data->next_url, url_len, L"%ls.html", next_id);
-            }
-            free(next_id);
+    if (page->next && page->next->source_filename) {
+        size_t url_len = wcslen(page->next->source_filename) + 10;
+        data->next_url = malloc(url_len * sizeof(wchar_t));
+        if (data->next_url) {
+            swprintf(data->next_url, url_len, L"%ls.html", page->next->source_filename);
         }
         data->next_title = page->next->title ? wcsdup(page->next->title) : NULL;
     }

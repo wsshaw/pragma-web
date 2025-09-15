@@ -42,7 +42,30 @@ pp_page* parse_file(const utf8_path filename) {
 	page->summary = malloc(1024);
 	page->icon = malloc(256);
 	page->static_icon = malloc(512);
+	page->source_filename = malloc(512);
 	page->parsed = true;
+
+	// Extract just the filename from the full path and store it
+	if (page->source_filename) {
+		const char *last_slash = strrchr(filename, '/');
+		const char *basename = last_slash ? last_slash + 1 : filename;
+
+		// Convert to wide string and remove .txt extension
+		wchar_t *wide_basename = wchar_convert(basename);
+		if (wide_basename) {
+			wcscpy(page->source_filename, wide_basename);
+
+			// Remove .txt extension if present
+			size_t len = wcslen(page->source_filename);
+			if (len > 4 && wcscmp(page->source_filename + len - 4, L".txt") == 0) {
+				page->source_filename[len - 4] = L'\0';
+			}
+
+			free(wide_basename);
+		} else {
+			wcscpy(page->source_filename, L"");
+		}
+	}
 	
 	// Initialize static_icon and summary to empty strings (with NULL checks)
 	if (page->static_icon) {
@@ -434,10 +457,10 @@ void write_single_page(pp_page* page, char *path, wchar_t* html_content) {
 	if (!page || !path || !html_content)
 		return;
 
-	// Get the filename based on date_stamp (same logic as build_single_page)
-	wchar_t *filename = string_from_int(page->date_stamp);
-	if (!filename) {
-		printf("Error: could not generate filename for page\n");
+	// Use the source filename instead of date_stamp for HTML output
+	wchar_t *filename = page->source_filename;
+	if (!filename || wcslen(filename) == 0) {
+		printf("Error: page has no source filename\n");
 		return;
 	}
 
@@ -446,7 +469,6 @@ void write_single_page(pp_page* page, char *path, wchar_t* html_content) {
 	char *full_path = malloc(full_path_len);
 	if (!full_path) {
 		printf("Error: could not allocate memory for page path\n");
-		free(filename);
 		return;
 	}
 
@@ -454,7 +476,6 @@ void write_single_page(pp_page* page, char *path, wchar_t* html_content) {
 	char *filename_char = char_convert(filename);
 	if (!filename_char) {
 		printf("Error: could not convert filename to char\n");
-		free(filename);
 		free(full_path);
 		return;
 	}
@@ -465,7 +486,6 @@ void write_single_page(pp_page* page, char *path, wchar_t* html_content) {
 	write_file_contents(full_path, html_content);
 
 	// Cleanup
-	free(filename);
 	free(filename_char);
 	free(full_path);
 }

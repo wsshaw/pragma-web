@@ -228,6 +228,7 @@ void free_page(pp_page *page) {
 	free(page->content);
 	free(page->summary);
 	free(page->icon);
+	free(page->source_filename);
 	// Temporarily comment out to test if this is causing the double-free
 	// free(page->static_icon);
 	free(page);

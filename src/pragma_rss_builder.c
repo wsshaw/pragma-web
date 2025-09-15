@@ -77,18 +77,18 @@ wchar_t* build_rss(pp_page* pages, site_info* site) {
         wcscat(rss_output, L"<link>");
         wcscat(rss_output, site->base_url);
         wcscat(rss_output, L"c/");
-        wchar_t *link_filename = string_from_int(current->date_stamp);
-        wcscat(rss_output, link_filename);
-        free(link_filename);
+        if (current->source_filename) {
+            wcscat(rss_output, current->source_filename);
+        }
         wcscat(rss_output, L".html</link>\n");
-        
+
         // GUID (same as link for now)
         wcscat(rss_output, L"<guid>");
         wcscat(rss_output, site->base_url);
         wcscat(rss_output, L"c/");
-        wchar_t *guid_filename = string_from_int(current->date_stamp);
-        wcscat(rss_output, guid_filename);
-        free(guid_filename);
+        if (current->source_filename) {
+            wcscat(rss_output, current->source_filename);
+        }
         wcscat(rss_output, L".html</guid>\n");
         
         // Publication date (RFC 2822 format)

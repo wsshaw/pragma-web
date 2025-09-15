@@ -98,7 +98,7 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	wcscat(scroll_output,L"<div class=\"post_card\"><h3>View as: scroll | <a href=\"/t/\">tag index</a></h3>\n");
 
 	pp_page *item;
-	wchar_t *year, *link_filename, *link_date;
+	wchar_t *year, *link_date;
 	struct tm t;
 
 	// build the scroll output, organizing it by year and month.
@@ -134,10 +134,10 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 				// build a list item + link with the relative path, which should not be hard-coded. 
 				wcscat(scroll_output, L"<li><a href=\"../c/");
 
-				// assemble the correct filename                
-				link_filename = string_from_int(item->date_stamp);
-                		wcscat(scroll_output, link_filename);
-                		free(link_filename);
+				// assemble the correct filename
+				if (item->source_filename) {
+					wcscat(scroll_output, item->source_filename);
+				}
 
 				// add href attribute of the link...
 				wcscat(scroll_output, L".html\">");

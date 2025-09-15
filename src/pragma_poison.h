@@ -224,6 +224,7 @@ typedef struct pp_page {
 	struct pp_page *prev;
 	wchar_t *icon;
 	wchar_t *static_icon;
+	wchar_t *source_filename;
 	bool parsed;
 } pp_page; 
 
