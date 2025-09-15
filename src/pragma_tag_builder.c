@@ -428,7 +428,11 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 		wchar_t *tag_url = wchar_convert(tag_url_str);
 
 		// Apply common token replacements
-		single_tag_index_output = apply_common_tokens(single_tag_index_output, site, tag_url, current_tag);
+		wchar_t tag_description[256];
+		swprintf(tag_description, 256, L"Posts tagged with '%ls' on %ls", current_tag, site->site_name);
+		wchar_t *temp_output = apply_common_tokens(single_tag_index_output, site, tag_url, current_tag, tag_description);
+		free(single_tag_index_output);
+		single_tag_index_output = temp_output;
 		
 		free(base_url_str);
 		free(tag_str);
@@ -460,8 +464,10 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 	wcscat(tag_index_url, L"t/");
 
 	// Apply common token replacements (this handles memory management internally)
+	wchar_t tag_index_description[256];
+	swprintf(tag_index_description, 256, L"Index of tags on %ls", site->site_name);
 	wchar_t *old_output = tag_output;
-	tag_output = apply_common_tokens(tag_output, site, tag_index_url, L"All posts");
+	tag_output = apply_common_tokens(tag_output, site, tag_index_url, L"All posts", tag_index_description);
 	free(old_output);  // Free the original since apply_common_tokens returns new memory
 	
 	free(tag_index_url);

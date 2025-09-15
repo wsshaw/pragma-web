@@ -309,7 +309,7 @@ void free_page_list(pp_page *head) {
  * returns:
  *  wchar_t* (processed HTML with tokens replaced; caller must free)
  */
-wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title) {
+wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title, const wchar_t *page_description) {
 	if (!output || !site)
 		return output;
 
@@ -377,6 +377,14 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 	}
 
 	temp = template_replace_token(result, L"PAGETITLE", meta_title);
+	if (temp) {
+		free(result);
+		result = temp;
+	}
+
+	// Add description replacement
+	const wchar_t *description = page_description ? page_description : L"";
+	temp = template_replace_token(result, L"DESCRIPTION", description);
 	if (temp) {
 		free(result);
 		result = temp;

@@ -131,75 +131,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	
 	
 
-	// the header includes some placeholders that need to be removed -- they're mostly for single posts
-	
-	wchar_t *temp;
-
-	temp = template_replace_token(index_output, L"BACK", L"");
-	if (temp) {
-		free(index_output);
-		index_output = temp;
-	}
-
-	temp = template_replace_token(index_output, L"FORWARD", L"");
-	if (temp) {
-		free(index_output);
-		index_output = temp;
-	}
-
-	temp = template_replace_token(index_output, L"TITLE", L"");
-	if (temp) {
-		free(index_output);
-		index_output = temp;
-	}
-
-	temp = template_replace_token(index_output, L"TAGS", L"");
-	if (temp) {
-		free(index_output);
-		index_output = temp;
-	}
-
-	temp = template_replace_token(index_output, L"DATE", L"");
-	if (temp) {
-		free(index_output);
-		index_output = temp;
-	}
-	
-	// Build full URL for default image
-	wchar_t *full_default_image;
-	if (wcsstr(site->default_image, L"://")) {
-		// Already a full URL
-		full_default_image = wcsdup(site->default_image);
-	} else {
-		// Make it a full URL using utility function
-		full_default_image = build_url(site->base_url, site->default_image);
-	}
-
-	temp = template_replace_token(index_output, L"MAIN_IMAGE", full_default_image);
-	if (temp) {
-		free(index_output);
-		index_output = temp;
-	}
-	free(full_default_image);
-
-	temp = template_replace_token(index_output, L"SITE_NAME", site->site_name);
-	if (temp) {
-		free(index_output);
-		index_output = temp;
-	}
-
-	temp = template_replace_token(index_output, L"TITLE_FOR_META", site->site_name);
-	if (temp) {
-		free(index_output);
-		index_output = temp;
-	}
-
-	temp = template_replace_token(index_output, L"PAGETITLE", site->site_name);
-	if (temp) {
-		free(index_output);
-		index_output = temp;
-	}
-
+	// Apply common token replacements using centralized function
 	// Build index URL path
 	wchar_t index_path[64];
 	if (start_page > 0) {
@@ -209,13 +141,19 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	}
 	wchar_t *actual_url = build_url(site->base_url, index_path);
 
-	temp = template_replace_token(index_output, L"PAGE_URL", actual_url);
-	if (temp) {
-		free(index_output);
-		index_output = temp;
+	// Create appropriate description for index pages
+	wchar_t *index_description = malloc(256 * sizeof(wchar_t));
+	if (index_description) {
+		swprintf(index_description, 256, L"Index of all posts on %ls", site->site_name);
 	}
-	
+
+	wchar_t *processed_output = apply_common_tokens(index_output, site, actual_url, site->site_name, index_description);
+	free(index_output);
 	free(actual_url);
+	if (index_description) {
+		free(index_description);
+	}
+	index_output = processed_output;
 
 	return index_output;
 }
