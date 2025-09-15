@@ -351,6 +351,28 @@ site_info* load_site_yaml(char* path) {
 	if (config->build_scroll) printf(", scroll");
 	printf("\n");
 
+	// Override base_url with environment variable if set (for local testing)
+	char *local_base = getenv("PRAGMA_LOCAL_BASE");
+	if (local_base) {
+		printf("=> PRAGMA_LOCAL_BASE detected: %s\n", local_base);
+		printf("=> This will generate a site with LOCAL URLs - not suitable for production!\n");
+		printf("=> Continue? (Press Enter to proceed, Ctrl+C to cancel): ");
+		fflush(stdout);
+
+		// Wait for user confirmation
+		char confirm[10];
+		if (fgets(confirm, sizeof(confirm), stdin)) {
+			// User pressed Enter (or typed something), continue
+			free(config->base_url);
+			config->base_url = wchar_convert(local_base);
+			printf("=> Using local base URL: %s\n", local_base);
+		} else {
+			// Input error or EOF, abort
+			printf("=> Aborting to prevent accidental local deployment\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	return config;
 }
 
