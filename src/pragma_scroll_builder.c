@@ -90,27 +90,36 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 		}
 	}
 
-	// allocate memory for output based on # of pages + header + footer + wiggle room
-	wchar_t *scroll_output = malloc(((c * 512) + wcslen(site->footer) + wcslen(site->header)) * sizeof(wchar_t));
+	// Initialize buffer for HTML output
+	safe_buffer *output_buf = buffer_pool_get_global();
+	if (!output_buf) {
+		printf("Error: failed to get buffer for scroll output\n");
+		return NULL;
+	}
 
-	// prepend the header and navigation element
-    wcscpy(scroll_output, site->header);
-	wcscat(scroll_output,L"<div class=\"post_card\"><h3>View as: scroll | <a href=\"/t/\">tag index</a></h3>\n");
+	// Add header and navigation
+	safe_append(site->header, output_buf);
+
+	// Add navigation header with raw HTML to avoid escaping issues
+	safe_append(L"<div class=\"post_card\"><h3>View as: scroll | <a href=\"/t/\">tag index</a></h3>\n", output_buf);
 
 	pp_page *item;
 	wchar_t *year, *link_date;
 	struct tm t;
 
-	// build the scroll output, organizing it by year and month.
-	// (TODO: Make this just marginally smarter -- account for empty years, for example)
+	// Build the scroll output, organizing it by year and month
 	for (int i = (max - min) ; i > -1 ; i--) {
-		wcscat(scroll_output, L"<h2>");
-
+		// Create year heading
 		year = string_from_int(min + i);
-		wcscat(scroll_output, year);
+		wchar_t *year_heading = html_heading(2, year, NULL);
+		safe_append(year_heading, output_buf);
+		safe_append(L"\n", output_buf);
 		free(year);
+		free(year_heading);
 
-		wcscat(scroll_output, L"</h2>\n<ul>\n");
+		// Start year list
+		safe_append(L"<ul>\n", output_buf);
+
 		for (int j = 11 ; j > -1; j--) {
 			for (int k = 0; k < MAX_MONTHLY_POSTS ; k++) {
 				if (calendar[i][j][k] == NULL) {
@@ -120,61 +129,69 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 				item = calendar[i][j][k]; // Direct pointer access - no expensive lookup!
 
 				if (k == 0) {
-	                		t = *localtime(&item->date_stamp);
- 					wchar_t *temp = malloc(64 * sizeof(wchar_t));
-					wcsftime(temp, 64, L"%B", &t); 
+					// First post of the month - create month heading
+					t = *localtime(&item->date_stamp);
+					wchar_t month_name[64];
+					wcsftime(month_name, 64, L"%B", &t);
 
-					// First of the month; start a list
-					wcscat(scroll_output, L"<li><h3>");
-					wcscat(scroll_output, temp);
-					wcscat(scroll_output, L"</h3></li><ul>\n");
-					free(temp);
+					safe_append(L"<li><h3>", output_buf);
+					safe_append(month_name, output_buf);
+					safe_append(L"</h3></li><ul>\n", output_buf);
 				}
 
-				// build a list item + link with the relative path, which should not be hard-coded. 
-				wcscat(scroll_output, L"<li><a href=\"../c/");
+				// Build post link and list item with raw HTML
+				wchar_t post_url[256];
+				swprintf(post_url, 256, L"../c/%ls.html",
+					item->source_filename ? item->source_filename : L"unknown");
 
-				// assemble the correct filename
-				if (item->source_filename) {
-					wcscat(scroll_output, item->source_filename);
-				}
-
-				// add href attribute of the link...
-				wcscat(scroll_output, L".html\">");
-				wcscat(scroll_output, item->title);
-				wcscat(scroll_output, L"</a> - ");
-
-				// ...and print a human-readable date from the epoch
 				link_date = legible_date(item->date_stamp);
-				wcscat(scroll_output, link_date);
+
+				safe_append(L"<li><a href=\"", output_buf);
+				safe_append(post_url, output_buf);
+				safe_append(L"\">", output_buf);
+				safe_append(item->title, output_buf);
+				safe_append(L"</a> - ", output_buf);
+				safe_append(link_date, output_buf);
+				safe_append(L"</li>", output_buf);
+
 				free(link_date);
 
-				wcscat(scroll_output, L"</li>\n");
-
-				// if this post is the last one for this month, end the list
+				// If this is the last post for this month, end the month list
 				if (calendar[i][j][k + 1] == NULL) {
-					wcscat(scroll_output, L"</ul>\n");
+					safe_append(L"</ul>\n", output_buf);
 					break;
 				}
 			}
 		}
 
-		wcscat(scroll_output, L"</ul>\n");
+		// End year list
+		safe_append(L"</ul>\n", output_buf);
 	}
 
-	wcscat(scroll_output, L"</div>\n");
-	wcscat(scroll_output, site->footer);
+	// Close main div and add footer
+	safe_append(L"</div>\n", output_buf);
+	safe_append(site->footer, output_buf);
 
-	// Build scroll page URL  
+	// Convert buffer to string for token replacement
+	wchar_t *scroll_output = wcsdup(output_buf->buffer);
+	buffer_pool_return_global(output_buf);
+
+	if (!scroll_output) {
+		printf("Error: failed to convert buffer to string\n");
+		return NULL;
+	}
+
+	// Build scroll page URL
 	wchar_t *scroll_url = malloc(256 * sizeof(wchar_t));
 	wcscpy(scroll_url, site->base_url);
 	wcscat(scroll_url, L"s/");
 
 	// Apply common token replacements
 	// Use "all posts" as page title - the template will combine it with site name
-	scroll_output = apply_common_tokens(scroll_output, site, scroll_url, L"all posts");
-	
-	free(scroll_url);
+	wchar_t *final_output = apply_common_tokens(scroll_output, site, scroll_url, L"all posts");
 
-	return scroll_output;
+	free(scroll_url);
+	free(scroll_output);
+
+	return final_output;
 }

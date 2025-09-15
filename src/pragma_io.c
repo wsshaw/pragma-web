@@ -355,7 +355,7 @@ site_info* load_site_yaml(char* path) {
 	char *local_base = getenv("PRAGMA_LOCAL_BASE");
 	if (local_base) {
 		printf("=> PRAGMA_LOCAL_BASE detected: %s\n", local_base);
-		printf("=> This will generate a site with LOCAL URLs - not suitable for production!\n");
+		printf("=> This option will generate a site with URLs that are probably not suitable for production.\n");
 		printf("=> Continue? (Press Enter to proceed, Ctrl+C to cancel): ");
 		fflush(stdout);
 
@@ -368,7 +368,7 @@ site_info* load_site_yaml(char* path) {
 			printf("=> Using local base URL: %s\n", local_base);
 		} else {
 			// Input error or EOF, abort
-			printf("=> Aborting to prevent accidental local deployment\n");
+			printf("=> Aborting pragma-web.\n");
 			exit(EXIT_FAILURE);
 		}
 	}
