@@ -36,11 +36,9 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	int skipahead = (start_page * site->index_size) - 1; // zero index
 	int counter = 0;
 
-	// FIXME: Low priority and would break cleanly, but the index page could easily exceed 128KB. 
-	if (PRAGMA_DEBUG) printf("memory checkpint: allocating index page\n");
+	// FIXME: Low priority and would break cleanly, but the index page could easily exceed 128KB.
 	size_t buffer_size = 131072;
 	wchar_t *index_output = malloc(buffer_size * sizeof(wchar_t));
-	if (PRAGMA_DEBUG) printf("passed checkpoint.\n");
 	
 
 	if (!index_output) {
@@ -49,10 +47,8 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		return NULL;
 	}
 
-	// insert the HTML of the site header first; initialize page counter 
-	if (PRAGMA_DEBUG) printf("memory checkpoint: copying site header to output\n");
+	// insert the HTML of the site header first; initialize page counter
 	wcscpy(index_output, site->header);
-	if (PRAGMA_DEBUG) printf("passed checkpoint.\n");
 	int pages_processed = 0;
 	
 	// Track buffer usage to prevent overflow
@@ -60,14 +56,12 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 
 	// Find the right spot in the linked list:
 	for (pp_page *current = pages; current != NULL; current = current->next) {
-		if (PRAGMA_DEBUG) printf(" -> in page loop in index builder\n");
 		if (counter <= skipahead && skipahead != 0) { 
 			counter++;
 			continue;
 		} 
 
 		// Use template system to render this index item
-		if (PRAGMA_DEBUG) printf("rendering post with template system\n");
 
 		// Validate timestamp is reasonable (between 1970 and 2100)
 		if (current->date_stamp < 0 || current->date_stamp > 4102444800L) {
@@ -82,8 +76,6 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		} else {
 			printf("! Warning: template rendering failed for post, skipping\n");
 		}
-
-		if (PRAGMA_DEBUG) printf("template rendering complete\n");
 
 		pages_processed++;
 		
@@ -116,41 +108,9 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		}
 	}
 
-	if (PRAGMA_DEBUG) printf("DEBUG: Before final </div>, length = %zu\n", wcslen(index_output));
 	//wcscat(index_output, L"</div>\n");
-	if (PRAGMA_DEBUG) printf("DEBUG: After final </div>, length = %zu\n", wcslen(index_output));
 	
-	// Check for corruption after </div>
-	if (PRAGMA_DEBUG) {
-		size_t check_len = wcslen(index_output);
-		for (size_t i = check_len > 20 ? check_len - 20 : 0; i < check_len; i++) {
-			if (index_output[i] > 0x10FFFF || index_output[i] < 0) {
-				printf("! Corruption after </div> at pos %zu: U+%08X\n", i, (unsigned int)index_output[i]);
-			}
-		}
-	}
 	
-	if (PRAGMA_DEBUG) {
-		printf("DEBUG: About to append footer (length %zu)\n", wcslen(site->footer));
-		printf("DEBUG: Current buffer length %zu, buffer size %zu\n", wcslen(index_output), buffer_size);
-		
-		// Check for corruption BEFORE footer append
-		printf("DEBUG: Checking for corruption BEFORE footer append...\n");
-		size_t pre_len = wcslen(index_output);
-		for (size_t i = 2900; i < pre_len && i < 3100; i++) {
-			if (index_output[i] > 0x10FFFF || index_output[i] < 0) {
-				printf("! PRE-FOOTER corruption at pos %zu: U+%08X\n", i, (unsigned int)index_output[i]);
-				// Show context
-				printf("Context: ");
-				for (size_t j = (i > 10 ? i - 10 : 0); j < i + 10 && j < pre_len; j++) {
-					if (j == i) printf("[CORRUPT]");
-					else if (index_output[j] >= 32 && index_output[j] < 127) printf("%lc", index_output[j]);
-					else printf("?");
-				}
-				printf("\n");
-			}
-		}
-	}
 	
 	// Check if we'll exceed buffer
 	size_t current_len = wcslen(index_output);
@@ -160,70 +120,40 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		       current_len, footer_len, buffer_size);
 	}
 	
-	// Validate footer content first
-	if (PRAGMA_DEBUG) {
-		printf("DEBUG: Validating footer content...\n");
-		for (size_t i = 0; i < footer_len; i++) {
-			if (site->footer[i] > 0x10FFFF || site->footer[i] < 0) {
-				printf("! Invalid character in footer at pos %zu: U+%08X\n", i, (unsigned int)site->footer[i]);
-				break;
-			}
-		}
-	}
 	
 	// Use safest possible copy method to avoid any corruption
 	size_t current_pos = wcslen(index_output);
 	
-	if (PRAGMA_DEBUG) printf("DEBUG: About to copy footer from pos %zu to %zu\n", current_pos, current_pos + footer_len);
 	
 	// Use wmemcpy which is safer than wcscpy/wcscat
 	wmemcpy(index_output + current_pos, site->footer, footer_len);
 	index_output[current_pos + footer_len] = L'\0';  // Manually null terminate
 	
-	if (PRAGMA_DEBUG) printf("DEBUG: After footer append, total length = %zu\n", wcslen(index_output));
 	
-	// Check for corruption after footer
-	if (PRAGMA_DEBUG) {
-		size_t check_len = wcslen(index_output);
-		for (size_t i = 2900; i < check_len && i < 3100; i++) {
-			if (index_output[i] > 0x10FFFF || index_output[i] < 0) {
-				printf("! Corruption after footer at pos %zu: U+%08X\n", i, (unsigned int)index_output[i]);
-			}
-		}
-	}
 
 	// the header includes some placeholders that need to be removed -- they're mostly for single posts
-	if (PRAGMA_DEBUG) {
-		printf("Before token replacements, length: %zu\n", wcslen(index_output));
-		
-		// Check for invalid characters before token replacement
-		for (size_t i = 0; i < wcslen(index_output); i++) {
-			if (index_output[i] > 0x10FFFF || index_output[i] < 0) {
-				printf("! Invalid character found at pos %zu before token replacement: U+%08X\n", i, (unsigned int)index_output[i]);
-				break;
-			}
-		}
-	}
 	
-	wchar_t *original = index_output;
-	index_output = replace_substring(index_output, L"{BACK}", L"");
-	if (index_output != original) free(original);
-	
-	original = index_output;
-	index_output = replace_substring(index_output, L"{FORWARD}", L"");
-	if (index_output != original) free(original);
-	
-	original = index_output;
-	index_output = replace_substring(index_output, L"{TITLE}", L"");
-	if (index_output != original) free(original);
-	
-	original = index_output;
-	index_output = replace_substring(index_output, L"{TAGS}", L"");
-	if (index_output != original) free(original);
-	
-	original = index_output;
-	index_output = replace_substring(index_output, L"{DATE}", L"");
-	if (index_output != original) free(original);
+	wchar_t *temp;
+
+	temp = template_replace_token(index_output, L"BACK", L"");
+	free(index_output);
+	index_output = temp;
+
+	temp = template_replace_token(index_output, L"FORWARD", L"");
+	free(index_output);
+	index_output = temp;
+
+	temp = template_replace_token(index_output, L"TITLE", L"");
+	free(index_output);
+	index_output = temp;
+
+	temp = template_replace_token(index_output, L"TAGS", L"");
+	free(index_output);
+	index_output = temp;
+
+	temp = template_replace_token(index_output, L"DATE", L"");
+	free(index_output);
+	index_output = temp;
 	
 	// Build full URL for default image
 	wchar_t *full_default_image = malloc(512 * sizeof(wchar_t));
@@ -241,22 +171,22 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		wcscat(full_default_image, default_path);
 	}
 
-	original = index_output;
-	index_output = replace_substring(index_output, L"{MAIN_IMAGE}", full_default_image);
-	if (index_output != original) free(original);
+	temp = template_replace_token(index_output, L"MAIN_IMAGE", full_default_image);
+	free(index_output);
+	index_output = temp;
 	free(full_default_image);
-	
-	original = index_output;
-	index_output = replace_substring(index_output, L"{SITE_NAME}", site->site_name);
-	if (index_output != original) free(original);
-	
-	original = index_output;
-	index_output = replace_substring(index_output, L"{TITLE_FOR_META}", site->site_name);
-	if (index_output != original) free(original);
-	
-	original = index_output;
-	index_output = replace_substring(index_output, L"{PAGETITLE}", site->site_name);
-	if (index_output != original) free(original);
+
+	temp = template_replace_token(index_output, L"SITE_NAME", site->site_name);
+	free(index_output);
+	index_output = temp;
+
+	temp = template_replace_token(index_output, L"TITLE_FOR_META", site->site_name);
+	free(index_output);
+	index_output = temp;
+
+	temp = template_replace_token(index_output, L"PAGETITLE", site->site_name);
+	free(index_output);
+	index_output = temp;
 
 	wchar_t *actual_url = malloc(256 * sizeof(wchar_t));
 	wcscpy(actual_url, site->base_url);
@@ -268,7 +198,9 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	}
 	wcscat(actual_url, L".html");
 
-	index_output = replace_substring(index_output, L"{PAGE_URL}", actual_url);
+	temp = template_replace_token(index_output, L"PAGE_URL", actual_url);
+	free(index_output);
+	index_output = temp;
 	
 	free(actual_url);
 

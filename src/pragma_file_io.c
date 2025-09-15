@@ -21,30 +21,11 @@ int write_file_contents(const utf8_path path, const wchar_t *content) {
 	}
 
 	// Convert wide characters to UTF-8 and write as bytes
-	if (PRAGMA_DEBUG) printf("Converting content to UTF-8, content length: %zu\n", wcslen(content));
 
 	// Find where the invalid character might be
 	size_t test_len = wcstombs(NULL, content, 0);
 	if (test_len == (size_t)-1) {
-		if (PRAGMA_DEBUG) {
-			// Try to find the problematic character
-			printf("! Invalid wide character found. Scanning content...\n");
-			for (size_t i = 0; i < wcslen(content); i++) {
-				wchar_t temp[2] = {content[i], L'\0'};
-				if (wcstombs(NULL, temp, 0) == (size_t)-1) {
-					printf("! Invalid character at position %zu: U+%08X\n", i, (unsigned int)content[i]);
-					// Show context around the invalid character
-					printf("Context: ");
-					for (size_t j = (i > 10 ? i - 10 : 0); j < i + 10 && j < wcslen(content); j++) {
-						if (j == i) printf("[INVALID]");
-						else if (content[j] >= 32 && content[j] < 127) printf("%lc", content[j]);
-						else printf("?");
-					}
-					printf("\n");
-					break;
-				}
-			}
-		}
+		// Invalid wide character found, but continue without debug output
 	}
 
 	char *utf8_content = char_convert(content);
@@ -54,7 +35,6 @@ int write_file_contents(const utf8_path path, const wchar_t *content) {
 		perror("char_convert failed");
 		return -1;
 	}
-	if (PRAGMA_DEBUG) printf("Converted to UTF-8, length: %zu\n", strlen(utf8_content));
 
 	//wprintf(L"%ls", content);
 

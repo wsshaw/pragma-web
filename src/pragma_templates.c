@@ -477,21 +477,31 @@ wchar_t* template_process_conditionals(wchar_t *template, template_data *data) {
  *  wchar_t* (heap-allocated rendered HTML; NULL on error)
  */
 wchar_t* apply_template(const char *template_path, template_data *data) {
-    if (!template_path || !data) return NULL;
+    if (!template_path || !data) {
+        return NULL;
+    }
+
 
     // Load template
     wchar_t *template = load_template_file(template_path);
-    if (!template) return NULL;
+    if (!template) {
+        return NULL;
+    }
+
 
     // Process loops first
     wchar_t *after_loops = template_process_loop(template, data);
     free(template);
-    if (!after_loops) return NULL;
+    if (!after_loops) {
+        return NULL;
+    }
 
     // Process conditionals
     wchar_t *after_conditionals = template_process_conditionals(after_loops, data);
     free(after_loops);
-    if (!after_conditionals) return NULL;
+    if (!after_conditionals) {
+        return NULL;
+    }
 
     // Replace basic tokens
     wchar_t *result = after_conditionals;
