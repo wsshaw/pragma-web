@@ -412,7 +412,12 @@ pp_page* load_site( int operation, char* directory, time_t since_time ) {
 
 	// Figure out the actual path now that we have all the relevant information...
 	strcpy(source_directory, directory);
-	strcat(source_directory, SITE_SOURCES_DEFAULT_SUBDIR);
+	// Ensure trailing slash before appending subdirectory
+	if (directory[strlen(directory)-1] != '/') {
+		strcat(source_directory, "/");
+	}
+	strcat(source_directory, "dat/");
+
 
 	// ...and try to open it up
 	if ((dir = utf8_opendir(source_directory)) != NULL) {
@@ -522,9 +527,13 @@ void write_single_page(pp_page* page, char *path, wchar_t* html_content) {
  *  char *subdir (subdirectory containing the icons)
  *  site_info *config (data structure containing the config info for this pragma site)
  */
-void load_site_icons(char *root, char *subdir, site_info *config) { 
-	char *path = malloc(strlen(root) + strlen(subdir) + 1);
+void load_site_icons(char *root, char *subdir, site_info *config) {
+	char *path = malloc(strlen(root) + strlen(subdir) + 2); // +2 for potential slash and null terminator
 	strcpy(path, root);
+	// Ensure trailing slash before appending subdirectory
+	if (root[strlen(root)-1] != '/') {
+		strcat(path, "/");
+	}
 	strcat(path, subdir);
 
 	// pass an integer pointer to directory_to_array(); it modifies that value based on the
