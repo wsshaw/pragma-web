@@ -171,7 +171,8 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	wcscat(scroll_url, L"s/");
 
 	// Apply common token replacements
-	scroll_output = apply_common_tokens(scroll_output, site, scroll_url, L"#pragma poison | all posts");
+	// Use "all posts" as page title - the template will combine it with site name
+	scroll_output = apply_common_tokens(scroll_output, site, scroll_url, L"all posts");
 	
 	free(scroll_url);
 

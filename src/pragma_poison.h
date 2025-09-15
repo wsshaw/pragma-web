@@ -84,7 +84,7 @@ L"<meta property=\"og:image\" content=\"{MAIN_IMAGE}\">"\
 L"<meta property=\"og:site_name\" content=\"{SITE_NAME}\">"\
 L"<meta property=\"og:url\" content=\"{PAGE_URL}\">"\
 L"<meta name=\"description\" content=\"{DESCRIPTION}\">"\
-L"<title>#pragma poison | {PAGETITLE}</title>"\
+L"<title>pragma-web | {PAGETITLE}</title>"\
 L"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"\
 L"<link rel=\"stylesheet\" href=\"/p.css\">"\
 L"<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">"\
@@ -92,7 +92,7 @@ L"<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>"\
 L"<link href=\"https://fonts.googleapis.com/css2?family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&display=swap\" rel=\"stylesheet\">"\
 L"</head>"\
 L"<body>"\
-L"<h1>#pragma poison</h1>"\
+L"<h1>pragma-web</h1>"\
 L"<p style=\"clear:none;\">"\
 L"<span style=\"float:left;\">Comparison is always true due to limited range of data type</span>"\
 L"<span style=\"float:right;\">{BACK}<a href=\"/\">front</a> | <a href=\"/s\">all</a> | <a href=\"/a\">about</a>{FORWARD}</span>"\
@@ -106,7 +106,7 @@ L"{TAGS}"
 
 #define DEFAULT_FOOTER	L"</div></body><script src=\"https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js\"></script><link href=\"https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css\" rel=\"stylesheet\"><script>const lightbox = GLightbox();</script></html>"
 
-#define DEFAULT_SAMPLE_POST L"Welcome to pragma!\n"\
+#define DEFAULT_SAMPLE_POST L"Welcome to pragma-web!\n"\
 L"tags:welcome,sample\n"\
 L"date:2024-01-01 12:00:00\n"\
 L"icon:default.svg\n"\

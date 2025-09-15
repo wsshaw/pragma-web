@@ -58,7 +58,7 @@ wchar_t* build_rss(pp_page* pages, site_info* site) {
     }
     wcscat(rss_output, L"</description>\n");
     
-    wcscat(rss_output, L"<generator>pragma poison static site generator</generator>\n");
+    wcscat(rss_output, L"<generator>pragma-web</generator>\n");
     wcscat(rss_output, L"<language>en-us</language>\n");
 
     // Add items for recent posts (limit to 20)
