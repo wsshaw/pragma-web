@@ -118,17 +118,66 @@ void md_list(wchar_t *line, safe_buffer *output) {
 /**
  * md_empty_line(): Handle an empty Markdown line.
  *
- * Currently appends a HTML line break "<br>\n". Future revisions may
- * collapse consecutive breaks or manage paragraph spacing a little better.
+ * In proper Markdown, blank lines separate paragraphs and don't create <br> tags.
+ * This function now does nothing, allowing natural paragraph separation.
  *
  * arguments:
- *  wchar_t *output (destination buffer for appended HTML; must not be NULL)
+ *  safe_buffer *output (destination buffer; may be NULL, unused)
  *
  * returns:
  *  void
  */
 void md_empty_line(safe_buffer *output) {
-	safe_append(L"<br>\n", output);
+	// Blank lines in Markdown separate paragraphs, not create line breaks
+	// Do nothing - let natural paragraph spacing handle this
+	(void)output; // Suppress unused parameter warning
+}
+
+/**
+ * md_is_horizontal_rule(): Check if a line is a horizontal rule.
+ *
+ * Horizontal rules are lines containing only 3+ dashes (---), asterisks (***),
+ * or underscores (___), optionally with whitespace.
+ *
+ * arguments:
+ *  wchar_t *line (line to check; must not be NULL)
+ *
+ * returns:
+ *  bool (true if line is a horizontal rule, false otherwise)
+ */
+bool md_is_horizontal_rule(wchar_t *line) {
+    if (!line) return false;
+
+    wchar_t rule_char = 0;
+    int count = 0;
+
+    for (size_t i = 0; line[i] != L'\0'; i++) {
+        if (line[i] == L'-' || line[i] == L'*' || line[i] == L'_') {
+            if (rule_char == 0) {
+                rule_char = line[i]; // Set the rule character
+            } else if (rule_char != line[i]) {
+                return false; // Mixed characters, not a rule
+            }
+            count++;
+        } else if (line[i] != L' ' && line[i] != L'\t' && line[i] != L'\n') {
+            return false; // Non-whitespace character, not a rule
+        }
+    }
+
+    return count >= 3; // Need at least 3 characters
+}
+
+/**
+ * md_horizontal_rule(): Append a horizontal rule (<hr>) to output.
+ *
+ * arguments:
+ *  safe_buffer *output (destination buffer for appended HTML; must not be NULL)
+ *
+ * returns:
+ *  void
+ */
+void md_horizontal_rule(safe_buffer *output) {
+    safe_append(L"<hr>\n", output);
 }
 
 /**
@@ -204,6 +253,81 @@ void md_inline(wchar_t *original, safe_buffer *output, md_parser_state *state) {
 		} else if (original[i] == L'_') { // underline
 			safe_append( state->underline ? L"</u>" : L"<u>", output);
 			state->underline = 1 - state->underline;
+		} else if (original[i] == L'[') { // links [text](url)
+			// Find out bounds of the link text first...
+			size_t start = i + 1;
+			while (i + 1 < length && original[i + 1] != L']')
+				i++;
+
+			// Check bounds and calculate proper length
+			if (i + 1 >= length) {
+				// Malformed link syntax, treat as literal character
+				wchar_t single_char[2] = {original[i], L'\0'};
+				safe_append(single_char, output);
+				continue;
+			}
+
+			size_t end = i + 1;
+			size_t link_text_length = end - start;
+
+			// Safely allocate memory for link text
+			wchar_t *link_text = malloc((link_text_length + 1) * sizeof(wchar_t));
+			if (!link_text) {
+				// Memory allocation failed, treat as literal
+				wchar_t single_char[2] = {original[i], L'\0'};
+				safe_append(single_char, output);
+				continue;
+			}
+			wcsncpy(link_text, original + start, link_text_length);
+			link_text[link_text_length] = L'\0';
+
+			// Skip '](' - check if we have '(' after ']'
+			if (i + 2 >= length || original[i + 2] != L'(') {
+				free(link_text);
+				wchar_t single_char[2] = {L'[', L'\0'};
+				safe_append(single_char, output);
+				continue;
+			}
+			i += 3;
+
+			// Find out bounds of the link url element
+			start = i;
+			while (i < length && original[i] != L')' && original[i] != L' ')
+				i++;
+
+			// Check bounds for URL
+			if (i >= length || original[i] != L')') {
+				free(link_text);
+				wchar_t single_char[2] = {L'[', L'\0'};
+				safe_append(single_char, output);
+				continue;
+			}
+
+			end = i;
+			size_t link_url_length = end - start;
+
+			// Safely allocate memory for link URL
+			wchar_t *link_url = malloc((link_url_length + 1) * sizeof(wchar_t));
+			if (!link_url) {
+				free(link_text);
+				wchar_t single_char[2] = {original[i], L'\0'};
+				safe_append(single_char, output);
+				continue;
+			}
+			wcsncpy(link_url, original + start, link_url_length);
+			link_url[link_url_length] = L'\0';
+
+			// Construct the <a> tag using the HTML function
+			wchar_t *link_tag = html_link(link_url, link_text, NULL);
+			if (link_tag) {
+				safe_append(link_tag, output);
+				free(link_tag);
+			}
+
+			// Free allocated memory
+			free(link_text);
+			free(link_url);
+			// i is already at the closing ')' so no need to increment
 		} else if (original[i] == L'!') { // images 
 			if (i + 1 < length && original[i + 1] == L'[') {
 				// Find out bounds of the alt text element first...
@@ -238,9 +362,9 @@ void md_inline(wchar_t *original, safe_buffer *output, md_parser_state *state) {
 
 				// Find out bounds of the image url element
 				start = i;
-				while (i < length && (original[i + 1] != L')' && original[i + 1] != L' ')) 
+				while (i < length && original[i] != L')' && original[i] != L' ' && original[i] != L'"')
 					i++;
-				
+
 				// Check bounds for URL
 				if (i >= length) {
 					free(alt_text);
@@ -248,33 +372,84 @@ void md_inline(wchar_t *original, safe_buffer *output, md_parser_state *state) {
 					safe_append(single_char, output);
 					continue;
 				}
-				
-				end = i + 1;
-				size_t img_url_length = end - start;
 
-				// Safely allocate memory for image URL
-				wchar_t *image_url = malloc((img_url_length + 1) * sizeof(wchar_t));
-				if (!image_url) {
+				// Parse URL and optional caption: ![alt](url "caption")
+				wchar_t *image_url = NULL;
+				wchar_t *caption = NULL;
+
+				// Look for space to separate URL from caption
+				size_t space_pos = start;
+				while (space_pos < length && original[space_pos] != L' ' && original[space_pos] != L')')
+					space_pos++;
+
+				if (space_pos < length && original[space_pos] == L' ') {
+					// Found space - URL ends here, caption may follow
+					size_t url_length = space_pos - start;
+					image_url = malloc((url_length + 1) * sizeof(wchar_t));
+					if (image_url) {
+						wcsncpy(image_url, original + start, url_length);
+						image_url[url_length] = L'\0';
+					}
+
+					// Skip whitespace after URL
+					i = space_pos;
+					while (i < length && original[i] == L' ') i++;
+
+					// Look for caption in quotes
+					if (i < length && original[i] == L'"') {
+						i++; // Skip opening quote
+						size_t caption_start = i;
+
+						// Find closing quote
+						while (i < length && original[i] != L'"')
+							i++;
+
+						if (i < length && original[i] == L'"') {
+							size_t caption_length = i - caption_start;
+							caption = malloc((caption_length + 1) * sizeof(wchar_t));
+							if (caption) {
+								wcsncpy(caption, original + caption_start, caption_length);
+								caption[caption_length] = L'\0';
+							}
+							i++; // Skip closing quote
+						}
+					}
+				} else {
+					// No space found - URL extends to closing paren or current position
+					end = (space_pos < length && original[space_pos] == L')') ? space_pos : i;
+					size_t url_length = end - start;
+					image_url = malloc((url_length + 1) * sizeof(wchar_t));
+					if (image_url) {
+						wcsncpy(image_url, original + start, url_length);
+						image_url[url_length] = L'\0';
+					}
+					i = end;
+				}
+
+				// Find closing parenthesis
+				while (i < length && original[i] != L')')
+					i++;
+
+				if (i >= length) {
 					free(alt_text);
-					wchar_t single_char[2] = {original[i], L'\0'};
+					free(image_url);
+					free(caption);
+					wchar_t single_char[2] = {L'!', L'\0'};
 					safe_append(single_char, output);
 					continue;
-				}
-				wcsncpy(image_url, original + start, img_url_length);
-				image_url[img_url_length] = L'\0';
+				} 
 
-				// tk support for caption 
-
-				// Construct the <img> tag using the new HTML function
-				wchar_t *image_tag = html_image(image_url, alt_text, L"post");
+				// Construct the image tag, using caption if available
+				wchar_t *image_tag = html_image_with_caption(image_url, alt_text, caption, L"post");
 				if (image_tag) {
 					safe_append(image_tag, output);
 					free(image_tag);
 				}
-				
+
 				// Free allocated memory
 				free(alt_text);
 				free(image_url);
+				free(caption);
 				++i;
 			} else if (i + 1 < length && original[i + 1] == L'!') {
 				// gallery tk
@@ -321,42 +496,67 @@ wchar_t* parse_markdown(wchar_t *input) {
 	s = e = input;
   	s = e = (wchar_t*) input;
 
+	// Get reusable buffers from the global pool for better memory efficiency
+	safe_buffer *line_buf = buffer_pool_get_global();
+	safe_buffer *esc_buf = buffer_pool_get_global();
+	safe_buffer *fmt_buf = buffer_pool_get_global();
+
+	if (!line_buf || !esc_buf || !fmt_buf) {
+		if (line_buf) buffer_pool_return_global(line_buf);
+		if (esc_buf) buffer_pool_return_global(esc_buf);
+		if (fmt_buf) buffer_pool_return_global(fmt_buf);
+		safe_buffer_free(&output);
+		return NULL;
+	}
+
 	// Use this method instead of wcstok() because we need to keep the newlines
   	while((e = wcschr(s, L'\n'))) {
+		// Reset and prepare buffers for this line
+		safe_buffer_reset(line_buf);
+		safe_buffer_reset(esc_buf);
+		safe_buffer_reset(fmt_buf);
 
-		// figure out how much space we need for this line
-		int line_length = (int)(e - s + 1);
-		wchar_t *line = malloc((line_length + 1) * sizeof(wchar_t)); 	
+		// Extract line without additional malloc
+		int line_length = (int)(e - s);
+		if (line_length >= 0) {
+			// Copy line directly to buffer
+			if (safe_append_char(L'\0', line_buf) != 0) { // ensure null termination space
+				buffer_pool_return_global(line_buf);
+				buffer_pool_return_global(esc_buf);
+				buffer_pool_return_global(fmt_buf);
+				safe_buffer_free(&output);
+				return NULL;
+			}
+			safe_buffer_reset(line_buf); // reset after ensuring capacity
 
-		if (line == NULL) { 
-			printf("malloc() failed to allocate space for parsing a line in parse_markdown!"); 
-			break;
+			for (int i = 0; i < line_length; i++) {
+				if (safe_append_char(s[i], line_buf) != 0) {
+					buffer_pool_return_global(line_buf);
+					buffer_pool_return_global(esc_buf);
+					buffer_pool_return_global(fmt_buf);
+					safe_buffer_free(&output);
+					return NULL;
+				}
+			}
+			if (safe_append_char(L'\n', line_buf) != 0 || safe_append_char(L'\0', line_buf) != 0) {
+				buffer_pool_return_global(line_buf);
+				buffer_pool_return_global(esc_buf);
+				buffer_pool_return_global(fmt_buf);
+				safe_buffer_free(&output);
+				return NULL;
+			}
 		}
-	
-		// get the line as displayed by printf()
-		swprintf(line, line_length + 1, L"%.*ls", line_length, s);
-	
-		// allocate memory for escaping literals (worst case: every char escaped = 2x length)
-		size_t esc_size = (wcslen(line) * 2 + 1);
-		wchar_t *esc = malloc(esc_size * sizeof(wchar_t));
-		if (esc == NULL) { printf("malloc() failed in parsing markdown!\n"); }
-		md_escape(line, esc, esc_size);
 
-		// allocate buffer for inline formatting (estimate 3x for HTML tags)
-		size_t fmt_size = wcslen(line) * 3 + 256;
-		safe_buffer fmt;
-		if (safe_buffer_init(&fmt, fmt_size) != 0) {
-			printf("failed to init buffer for inline formatting!\n");
-			free(esc);
-			free(line);
-			continue;
-		}
-		md_inline(esc, &fmt, &state);
+		// Escape using buffer (more efficient than malloc)
+		md_escape(line_buf->buffer, esc_buf->buffer, esc_buf->size);
 
-		if (fmt.buffer[0] == L'#') {
+		// Process inline formatting using the buffer directly
+		md_inline(esc_buf->buffer, fmt_buf, &state);
+
+		if (fmt_buf->buffer[0] == L'#') {
 			// a line starting with # must be a heading
-			md_header(fmt.buffer, &output);
-		} else if (fmt.buffer[0] == L'-' && fmt.buffer[1] == L' ') {
+			md_header(fmt_buf->buffer, &output);
+		} else if (fmt_buf->buffer[0] == L'-' && fmt_buf->buffer[1] == L' ') {
 			// a line beginning with "- " is an unordered list item		
 			// close any previous lists (nesting = \t, not lists of lists)
 			if (state.within_ordered_list) {
@@ -367,8 +567,8 @@ wchar_t* parse_markdown(wchar_t *input) {
 				state.within_unordered_list = 1;
 				safe_append(L"<ul>\n", &output); 
 			}
-			md_list(fmt.buffer, &output);
-		} else if (iswdigit(fmt.buffer[0]) && fmt.buffer[1] == L'.') {
+			md_list(fmt_buf->buffer, &output);
+		} else if (iswdigit(fmt_buf->buffer[0]) && fmt_buf->buffer[1] == L'.') {
 			// a line beginning with "1." (or "\d\." in general) is an ordered list item
 			if (state.within_unordered_list) {
 				state.within_unordered_list = 0;
@@ -378,14 +578,17 @@ wchar_t* parse_markdown(wchar_t *input) {
 				state.within_ordered_list = 1;
 				safe_append(L"<ol>\n", &output);
 			}
-			md_list(fmt.buffer, &output);
-		} else if (fmt.buffer[0] == L'>') {
+			md_list(fmt_buf->buffer, &output);
+		} else if (fmt_buf->buffer[0] == L'>') {
 			if (!state.block_quote) {
 				state.block_quote = 1;
 				safe_append(L"<blockquote>", &output);
 			}
-			md_paragraph(fmt.buffer + 1, &output);
-		} else if ((fmt.buffer[0] == '\0') || (fmt.buffer[0] == '\n')) {
+			md_paragraph(fmt_buf->buffer + 1, &output);
+		} else if (md_is_horizontal_rule(fmt_buf->buffer)) {
+			// Horizontal rule: ---, ***, or ___
+			md_horizontal_rule(&output);
+		} else if ((fmt_buf->buffer[0] == '\0') || (fmt_buf->buffer[0] == '\n')) {
 			md_empty_line(&output);
 		} else {
 			if (state.within_unordered_list) {
@@ -400,13 +603,15 @@ wchar_t* parse_markdown(wchar_t *input) {
 				state.block_quote = 0;
 				safe_append(L"</blockquote>", &output);
 			}
-			md_paragraph(fmt.buffer, &output);
+			md_paragraph(fmt_buf->buffer, &output);
 		}
-		free(esc);
-		safe_buffer_free(&fmt);
-		free(line);
 		s = e + 1;
-	}		
+	}
+
+	// Return buffers to pool
+	buffer_pool_return_global(line_buf);
+	buffer_pool_return_global(esc_buf);
+	buffer_pool_return_global(fmt_buf);		
 
 	// Clean up: did we leave a list open?  Bold?  etc.
 	if (state.within_unordered_list) {

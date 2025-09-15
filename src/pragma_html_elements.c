@@ -363,6 +363,93 @@ wchar_t* html_paragraph(const wchar_t *text, const wchar_t *css_class) {
 }
 
 /**
+ * html_image_with_caption(): Create an HTML image element with caption.
+ *
+ * Generates: <figure class="css_class"><img src="url" alt="alt_text"><figcaption>caption</figcaption></figure>
+ * If no caption is provided, falls back to html_image().
+ * URL, alt text, and caption are automatically escaped.
+ *
+ * arguments:
+ *  const wchar_t *src (image URL; must not be NULL)
+ *  const wchar_t *alt (alt text; may be NULL)
+ *  const wchar_t *caption (caption text; may be NULL)
+ *  const wchar_t *css_class (CSS class name; may be NULL)
+ *
+ * returns:
+ *  wchar_t* (heap-allocated figure element or img element; NULL on error)
+ */
+wchar_t* html_image_with_caption(const wchar_t *src, const wchar_t *alt, const wchar_t *caption, const wchar_t *css_class) {
+    if (!src) return NULL;
+
+    // If no caption, just use regular image
+    if (!caption || wcslen(caption) == 0) {
+        return html_image(src, alt, css_class);
+    }
+
+    // Create the image element (without class - we'll put class on figure)
+    wchar_t *img_element = html_image(src, alt, NULL);
+    if (!img_element) return NULL;
+
+    // Create the figcaption element
+    wchar_t *figcaption = html_element(L"figcaption", caption, NULL);
+    if (!figcaption) {
+        free(img_element);
+        return NULL;
+    }
+
+    // Combine image and figcaption
+    safe_buffer *content_buf = buffer_pool_get_global();
+    if (!content_buf) {
+        free(img_element);
+        free(figcaption);
+        return NULL;
+    }
+
+    safe_append(img_element, content_buf);
+    safe_append(figcaption, content_buf);
+
+    wchar_t *figure_content = safe_buffer_to_string(content_buf);
+    buffer_pool_return_global(content_buf);
+
+    free(img_element);
+    free(figcaption);
+
+    if (!figure_content) return NULL;
+
+    // Create figure attributes if class specified
+    wchar_t *attributes = NULL;
+    if (css_class && wcslen(css_class) > 0) {
+        safe_buffer *attr_buf = buffer_pool_get_global();
+        if (!attr_buf) {
+            free(figure_content);
+            return NULL;
+        }
+
+        safe_append(L"class=\"", attr_buf);
+        attr_buf->auto_escape = true;
+        safe_append(css_class, attr_buf);
+        attr_buf->auto_escape = false;
+        safe_append(L"\"", attr_buf);
+
+        attributes = safe_buffer_to_string(attr_buf);
+        buffer_pool_return_global(attr_buf);
+
+        if (!attributes) {
+            free(figure_content);
+            return NULL;
+        }
+    }
+
+    // Create the figure element
+    wchar_t *result = html_element(L"figure", figure_content, attributes);
+
+    free(figure_content);
+    free(attributes);
+
+    return result;
+}
+
+/**
  * html_list_item(): Create an HTML list item element.
  *
  * Generates: <li class="css_class">content</li>
