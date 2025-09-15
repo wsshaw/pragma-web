@@ -452,7 +452,50 @@ void md_inline(wchar_t *original, safe_buffer *output, md_parser_state *state) {
 				free(caption);
 				++i;
 			} else if (i + 1 < length && original[i + 1] == L'!') {
-				// gallery tk
+				// Parse image gallery: !!(directory)
+				if (i + 2 < length && original[i + 2] == L'(') {
+					i += 3; // Skip "!!("
+
+					// Find directory path
+					size_t start = i;
+					while (i < length && original[i] != L')')
+						i++;
+
+					if (i >= length) {
+						// Missing closing parenthesis, treat as literal
+						wchar_t single_char[2] = {L'!', L'\0'};
+						safe_append(single_char, output);
+						continue;
+					}
+
+					size_t end = i;
+					size_t dir_path_length = end - start;
+
+					// Allocate memory for directory path
+					wchar_t *dir_path = malloc((dir_path_length + 1) * sizeof(wchar_t));
+					if (!dir_path) {
+						// Memory allocation failed, treat as literal
+						wchar_t single_char[2] = {L'!', L'\0'};
+						safe_append(single_char, output);
+						continue;
+					}
+					wcsncpy(dir_path, original + start, dir_path_length);
+					dir_path[dir_path_length] = L'\0';
+
+					// Generate gallery HTML
+					wchar_t *gallery_html = html_image_gallery(dir_path, L"gallery");
+					if (gallery_html) {
+						safe_append(gallery_html, output);
+						free(gallery_html);
+					}
+
+					free(dir_path);
+					++i; // Skip closing parenthesis
+				} else {
+					// Not a gallery, treat as literal
+					wchar_t single_char[2] = {L'!', L'\0'};
+					safe_append(single_char, output);
+				}
 			} else {
 				wchar_t single_char[2] = {original[i], L'\0'};
 				safe_append(single_char, output);

@@ -450,6 +450,92 @@ wchar_t* html_image_with_caption(const wchar_t *src, const wchar_t *alt, const w
 }
 
 /**
+ * html_image_gallery(): Create an HTML image gallery from a directory path.
+ *
+ * Generates: <div class="gallery"><img src="path/image1.jpg"><img src="path/image2.jpg">...</div>
+ * Scans the specified directory for image files and creates a gallery div containing all images.
+ *
+ * arguments:
+ *  const wchar_t *directory_path (directory path to scan for images; must not be NULL)
+ *  const wchar_t *css_class (CSS class name for gallery div; may be NULL)
+ *
+ * returns:
+ *  wchar_t* (heap-allocated gallery div element; NULL on error)
+ */
+wchar_t* html_image_gallery(const wchar_t *directory_path, const wchar_t *css_class) {
+    if (!directory_path) return NULL;
+
+    // Convert wide string path to char for directory operations
+    char *dir_path = char_convert(directory_path);
+    if (!dir_path) return NULL;
+
+    // Get array of image files in directory
+    char **filenames = NULL;
+    int count = 0;
+    directory_to_array(dir_path, &filenames, &count);
+    free(dir_path);
+
+    if (!filenames || count == 0) {
+        // Return empty gallery div if directory is empty or doesn't exist
+        return html_div(L"", css_class ? css_class : L"gallery");
+    }
+
+    // Build gallery content
+    safe_buffer *gallery_buf = buffer_pool_get_global();
+    if (!gallery_buf) {
+        // Free the filenames array
+        for (int i = 0; i < count; i++) {
+            free(filenames[i]);
+        }
+        free(filenames);
+        return NULL;
+    }
+
+    // Process each image file
+    for (int i = 0; i < count; i++) {
+        // Convert filename back to wide string
+        wchar_t *wide_filename = wchar_convert(filenames[i]);
+        if (wide_filename) {
+            // Build full image path
+            safe_buffer *path_buf = buffer_pool_get_global();
+            if (path_buf) {
+                safe_append(directory_path, path_buf);
+                if (directory_path[wcslen(directory_path) - 1] != L'/') {
+                    safe_append(L"/", path_buf);
+                }
+                safe_append(wide_filename, path_buf);
+
+                wchar_t *full_path = safe_buffer_to_string(path_buf);
+                if (full_path) {
+                    // Create image element without caption
+                    wchar_t *img_element = html_image(full_path, wide_filename, L"gallery-image");
+                    if (img_element) {
+                        safe_append(img_element, gallery_buf);
+                        free(img_element);
+                    }
+                    free(full_path);
+                }
+                buffer_pool_return_global(path_buf);
+            }
+            free(wide_filename);
+        }
+        free(filenames[i]);
+    }
+    free(filenames);
+
+    wchar_t *gallery_content = safe_buffer_to_string(gallery_buf);
+    buffer_pool_return_global(gallery_buf);
+
+    if (!gallery_content) return NULL;
+
+    // Wrap in gallery div
+    wchar_t *result = html_div(gallery_content, css_class ? css_class : L"gallery");
+    free(gallery_content);
+
+    return result;
+}
+
+/**
  * html_list_item(): Create an HTML list item element.
  *
  * Generates: <li class="css_class">content</li>

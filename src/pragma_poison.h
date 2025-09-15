@@ -286,6 +286,7 @@ wchar_t* html_self_closing(const wchar_t *tag, const wchar_t *attributes);
 wchar_t* html_link(const wchar_t *href, const wchar_t *text, const wchar_t *css_class);
 wchar_t* html_image(const wchar_t *src, const wchar_t *alt, const wchar_t *css_class);
 wchar_t* html_image_with_caption(const wchar_t *src, const wchar_t *alt, const wchar_t *caption, const wchar_t *css_class);
+wchar_t* html_image_gallery(const wchar_t *directory_path, const wchar_t *css_class);
 wchar_t* html_div(const wchar_t *content, const wchar_t *css_class);
 wchar_t* html_heading(int level, const wchar_t *text, const wchar_t *css_class);
 wchar_t* html_paragraph(const wchar_t *text, const wchar_t *css_class);
