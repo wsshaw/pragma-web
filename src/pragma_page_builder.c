@@ -21,7 +21,7 @@
  */
 wchar_t* build_single_page(pp_page* page, site_info* site) {
 	if (!page || !site) {
-		if (PRAGMA_DEBUG) ("=> error: no page/site in build_single_page, page = %s, site = %s", !page?"no":"yes", !site?"no":"yes");
+		if (PRAGMA_DEBUG) printf("=> error: no page/site in build_single_page, page = %s, site = %s\n", !page?"no":"yes", !site?"no":"yes");
 		return NULL;
 	}
 	// figure out where this page lives in the world
@@ -107,41 +107,23 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 		return NULL;
 	} 
 
-	// Replace the {magic tokens} using template system
-	wchar_t *temp;
-
-	temp = template_replace_token(page_output, L"PAGETITLE", page->title);
-	free(page_output);
-	page_output = temp;
-
-	temp = template_replace_token(page_output, L"FORWARD", navigation_links ? navigation_links : L"");
-	free(page_output);
-	page_output = temp;
-
-	temp = template_replace_token(page_output, L"BACK", L""); // BACK now handled by FORWARD navigation
-	free(page_output);
-	page_output = temp;
-
-	temp = template_replace_token(page_output, L"MAIN_IMAGE", share_image);
-	free(page_output);
-	page_output = temp;
-
-	temp = template_replace_token(page_output, L"SITE_NAME", site->site_name);
-	free(page_output);
-	page_output = temp;
-
 	// Remove #MORE delimiter (not a {TOKEN} so use replace_substring)
-	temp = replace_substring(page_output, L"#MORE", L"");
+	// Note: Common tokens (PAGETITLE, FORWARD, BACK, MAIN_IMAGE, SITE_NAME, etc.)
+	// are already handled by apply_common_tokens() in render_page_with_template()
+	wchar_t *temp = replace_substring(page_output, L"#MORE", L"");
 	if (temp != page_output) {
 		free(page_output);
 		page_output = temp;
 	}
-	
+
 	// Add description for Open Graph and meta tags
+	// Note: DESCRIPTION might not be handled by apply_common_tokens
 	wchar_t *description = get_page_description(page);
 	temp = template_replace_token(page_output, L"DESCRIPTION", description ? description : L"");
-	free(page_output);
-	page_output = temp;
+	if (temp) {
+		free(page_output);
+		page_output = temp;
+	}
 	if (description) {
 		free(description);
 	}
@@ -151,35 +133,38 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	free(next_id);
 	free(navigation_links);
 
-	temp = template_replace_token(page_output, L"TITLE_FOR_META", page->title);
-	free(page_output);
-	page_output = temp;
+	// Note: TITLE_FOR_META and PAGE_URL are already handled by apply_common_tokens()
+	// Skip these to avoid double replacement
 
-	temp = template_replace_token(page_output, L"PAGE_URL", page_url);
-	free(page_output);
-	page_output = temp;
-
+	// Replace page-specific TITLE token (different from TITLE_FOR_META)
 	wchar_t* title_element = html_heading(3, page->title, NULL);
 	temp = template_replace_token(page_output, L"TITLE", title_element);
-	free(page_output);
-	page_output = temp;
+	if (temp) {
+		free(page_output);
+		page_output = temp;
+	}
 	free(title_element);
 
 	//printf("DEBUG: About to call explode_tags with tags: %ls\n", page->tags ? page->tags : L"[NULL]");
 
-	// Replace TAGS token
+	// Replace page-specific TAGS token
 	wchar_t* tag_element = explode_tags(page->tags);
 	temp = template_replace_token(page_output, L"TAGS", tag_element ? tag_element : L"");
-	free(page_output);
-	page_output = temp;
+	if (temp) {
+		free(page_output);
+		page_output = temp;
+	}
 	if (tag_element) {
 		free(tag_element);
 	}
 
+	// Replace page-specific DATE token
 	wchar_t *formatted_date = wrap_with_element(legible_date(page->date_stamp), L"<i>", L"</i><br>");
 	temp = template_replace_token(page_output, L"DATE", formatted_date);
-	free(page_output);
-	page_output = temp;
+	if (temp) {
+		free(page_output);
+		page_output = temp;
+	}
 	free(formatted_date);
 
 	free(page_url);

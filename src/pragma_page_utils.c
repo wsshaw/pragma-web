@@ -312,20 +312,30 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 	if (!output || !site)
 		return output;
 
+	// Make a copy so we always return new memory (required contract)
+	wchar_t *result = wcsdup(output);
+	if (!result) return output; // Fallback if duplication fails
+
 	// Use template system for token replacement with proper memory management
 	wchar_t *temp;
 
-	temp = template_replace_token(output, L"BACK", L"");
-	free(output);
-	output = temp;
+	temp = template_replace_token(result, L"BACK", L"");
+	if (temp) {
+		free(result);
+		result = temp;
+	}
 
-	temp = template_replace_token(output, L"FORWARD", L"");
-	free(output);
-	output = temp;
+	temp = template_replace_token(result, L"FORWARD", L"");
+	if (temp) {
+		free(result);
+		result = temp;
+	}
 
-	temp = template_replace_token(output, L"TITLE", L"");
-	free(output);
-	output = temp;
+	temp = template_replace_token(result, L"TITLE", L"");
+	if (temp) {
+		free(result);
+		result = temp;
+	}
 	// Note: {TAGS} and {DATE} are handled by individual page builders
 	// Build full URL for default image
 	wchar_t *full_default_image = malloc(512 * sizeof(wchar_t));
@@ -342,30 +352,40 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 		}
 		wcscat(full_default_image, default_path);
 	}
-	temp = template_replace_token(output, L"MAIN_IMAGE", full_default_image);
-	free(output);
-	output = temp;
+	temp = template_replace_token(result, L"MAIN_IMAGE", full_default_image);
+	if (temp) {
+		free(result);
+		result = temp;
+	}
 	free(full_default_image);
 
-	temp = template_replace_token(output, L"SITE_NAME", site->site_name);
-	free(output);
-	output = temp;
+	temp = template_replace_token(result, L"SITE_NAME", site->site_name);
+	if (temp) {
+		free(result);
+		result = temp;
+	}
 
 	if (page_url) {
-		temp = template_replace_token(output, L"PAGE_URL", page_url);
-		free(output);
-		output = temp;
+		temp = template_replace_token(result, L"PAGE_URL", page_url);
+		if (temp) {
+			free(result);
+			result = temp;
+		}
 	}
 
 	const wchar_t *meta_title = page_title ? page_title : site->site_name;
 
-	temp = template_replace_token(output, L"TITLE_FOR_META", meta_title);
-	free(output);
-	output = temp;
+	temp = template_replace_token(result, L"TITLE_FOR_META", meta_title);
+	if (temp) {
+		free(result);
+		result = temp;
+	}
 
-	temp = template_replace_token(output, L"PAGETITLE", meta_title);
-	free(output);
-	output = temp;
+	temp = template_replace_token(result, L"PAGETITLE", meta_title);
+	if (temp) {
+		free(result);
+		result = temp;
+	}
 
-	return output;
+	return result;
 }

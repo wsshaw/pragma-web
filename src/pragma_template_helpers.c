@@ -109,8 +109,10 @@ wchar_t* render_page_with_template(pp_page *page, site_info *site) {
 
         // Apply common token replacements
         wchar_t *final_page = apply_common_tokens(complete_page, site, data->post_url, data->title);
-        free(complete_page);
-        complete_page = final_page;
+        if (final_page) {
+            free(complete_page);
+            complete_page = final_page;
+        }
     }
 
     // Clean up

@@ -136,24 +136,34 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	wchar_t *temp;
 
 	temp = template_replace_token(index_output, L"BACK", L"");
-	free(index_output);
-	index_output = temp;
+	if (temp) {
+		free(index_output);
+		index_output = temp;
+	}
 
 	temp = template_replace_token(index_output, L"FORWARD", L"");
-	free(index_output);
-	index_output = temp;
+	if (temp) {
+		free(index_output);
+		index_output = temp;
+	}
 
 	temp = template_replace_token(index_output, L"TITLE", L"");
-	free(index_output);
-	index_output = temp;
+	if (temp) {
+		free(index_output);
+		index_output = temp;
+	}
 
 	temp = template_replace_token(index_output, L"TAGS", L"");
-	free(index_output);
-	index_output = temp;
+	if (temp) {
+		free(index_output);
+		index_output = temp;
+	}
 
 	temp = template_replace_token(index_output, L"DATE", L"");
-	free(index_output);
-	index_output = temp;
+	if (temp) {
+		free(index_output);
+		index_output = temp;
+	}
 	
 	// Build full URL for default image
 	wchar_t *full_default_image = malloc(512 * sizeof(wchar_t));
@@ -172,21 +182,29 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	}
 
 	temp = template_replace_token(index_output, L"MAIN_IMAGE", full_default_image);
-	free(index_output);
-	index_output = temp;
+	if (temp) {
+		free(index_output);
+		index_output = temp;
+	}
 	free(full_default_image);
 
 	temp = template_replace_token(index_output, L"SITE_NAME", site->site_name);
-	free(index_output);
-	index_output = temp;
+	if (temp) {
+		free(index_output);
+		index_output = temp;
+	}
 
 	temp = template_replace_token(index_output, L"TITLE_FOR_META", site->site_name);
-	free(index_output);
-	index_output = temp;
+	if (temp) {
+		free(index_output);
+		index_output = temp;
+	}
 
 	temp = template_replace_token(index_output, L"PAGETITLE", site->site_name);
-	free(index_output);
-	index_output = temp;
+	if (temp) {
+		free(index_output);
+		index_output = temp;
+	}
 
 	wchar_t *actual_url = malloc(256 * sizeof(wchar_t));
 	wcscpy(actual_url, site->base_url);
@@ -199,8 +217,10 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	wcscat(actual_url, L".html");
 
 	temp = template_replace_token(index_output, L"PAGE_URL", actual_url);
-	free(index_output);
-	index_output = temp;
+	if (temp) {
+		free(index_output);
+		index_output = temp;
+	}
 	
 	free(actual_url);
 
