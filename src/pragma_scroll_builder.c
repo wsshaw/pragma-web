@@ -111,7 +111,7 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	for (int i = (max - min) ; i > -1 ; i--) {
 		// Create year heading
 		year = string_from_int(min + i);
-		wchar_t *year_heading = html_heading(2, year, NULL);
+		wchar_t *year_heading = html_heading(2, year, NULL, true);
 		safe_append(year_heading, output_buf);
 		safe_append(L"\n", output_buf);
 		free(year);

@@ -143,7 +143,7 @@ wchar_t* html_self_closing(const wchar_t *tag, const wchar_t *attributes) {
  * returns:
  *  wchar_t* (heap-allocated anchor element; NULL on error)
  */
-wchar_t* html_link(const wchar_t *href, const wchar_t *text, const wchar_t *css_class) {
+wchar_t* html_link(const wchar_t *href, const wchar_t *text, const wchar_t *css_class, bool escape_content) {
     if (!href || !text) return NULL;
 
     safe_buffer *buf = buffer_pool_get_global();
@@ -178,7 +178,20 @@ wchar_t* html_link(const wchar_t *href, const wchar_t *text, const wchar_t *css_
         return NULL;
     }
 
-    wchar_t *result = html_element(L"a", text, attributes);
+    wchar_t *result;
+    if (escape_content) {
+        // Use html_element which automatically escapes content
+        result = html_element(L"a", text, attributes);
+    } else {
+        // Build element manually without escaping content
+        safe_append(L"<a ", buf);
+        safe_append(attributes, buf);
+        safe_append(L">", buf);
+        safe_append(text, buf);  // No escaping
+        safe_append(L"</a>", buf);
+        result = safe_buffer_to_string(buf);
+    }
+
     free(attributes);
     buffer_pool_return_global(buf);
 
@@ -290,7 +303,7 @@ wchar_t* html_div(const wchar_t *content, const wchar_t *css_class) {
  * returns:
  *  wchar_t* (heap-allocated heading element; NULL on error)
  */
-wchar_t* html_heading(int level, const wchar_t *text, const wchar_t *css_class) {
+wchar_t* html_heading(int level, const wchar_t *text, const wchar_t *css_class, bool escape_content) {
     if (!text) return NULL;
 
     // Clamp level to valid range
@@ -318,9 +331,35 @@ wchar_t* html_heading(int level, const wchar_t *text, const wchar_t *css_class) 
         if (!attributes) return NULL;
     }
 
-    wchar_t *result = html_element(tag, text, attributes);
-    free(attributes);
+    wchar_t *result;
+    if (escape_content) {
+        // Use html_element which automatically escapes content
+        result = html_element(tag, text, attributes);
+    } else {
+        // Build element manually without escaping content
+        safe_buffer *buf = buffer_pool_get_global();
+        if (!buf) {
+            free(attributes);
+            return NULL;
+        }
 
+        safe_append(L"<", buf);
+        safe_append(tag, buf);
+        if (attributes && wcslen(attributes) > 0) {
+            safe_append(L" ", buf);
+            safe_append(attributes, buf);
+        }
+        safe_append(L">", buf);
+        safe_append(text, buf);  // No escaping
+        safe_append(L"</", buf);
+        safe_append(tag, buf);
+        safe_append(L">", buf);
+
+        result = safe_buffer_to_string(buf);
+        buffer_pool_return_global(buf);
+    }
+
+    free(attributes);
     return result;
 }
 
@@ -337,7 +376,7 @@ wchar_t* html_heading(int level, const wchar_t *text, const wchar_t *css_class) 
  * returns:
  *  wchar_t* (heap-allocated paragraph element; NULL on error)
  */
-wchar_t* html_paragraph(const wchar_t *text, const wchar_t *css_class) {
+wchar_t* html_paragraph(const wchar_t *text, const wchar_t *css_class, bool escape_content) {
     wchar_t *attributes = NULL;
 
     if (css_class && wcslen(css_class) > 0) {
@@ -356,9 +395,34 @@ wchar_t* html_paragraph(const wchar_t *text, const wchar_t *css_class) {
         if (!attributes) return NULL;
     }
 
-    wchar_t *result = html_element(L"p", text, attributes);
-    free(attributes);
+    wchar_t *result;
+    if (escape_content) {
+        // Use html_element which automatically escapes content
+        result = html_element(L"p", text, attributes);
+    } else {
+        // Build element manually without escaping content
+        safe_buffer *buf = buffer_pool_get_global();
+        if (!buf) {
+            free(attributes);
+            return NULL;
+        }
 
+        safe_append(L"<p", buf);
+        if (attributes && wcslen(attributes) > 0) {
+            safe_append(L" ", buf);
+            safe_append(attributes, buf);
+        }
+        safe_append(L">", buf);
+        if (text) {
+            safe_append(text, buf);  // No escaping
+        }
+        safe_append(L"</p>", buf);
+
+        result = safe_buffer_to_string(buf);
+        buffer_pool_return_global(buf);
+    }
+
+    free(attributes);
     return result;
 }
 
@@ -548,7 +612,7 @@ wchar_t* html_image_gallery(const wchar_t *directory_path, const wchar_t *css_cl
  * returns:
  *  wchar_t* (heap-allocated list item element; NULL on error)
  */
-wchar_t* html_list_item(const wchar_t *content, const wchar_t *css_class) {
+wchar_t* html_list_item(const wchar_t *content, const wchar_t *css_class, bool escape_content) {
     wchar_t *attributes = NULL;
 
     if (css_class && wcslen(css_class) > 0) {
@@ -567,8 +631,33 @@ wchar_t* html_list_item(const wchar_t *content, const wchar_t *css_class) {
         if (!attributes) return NULL;
     }
 
-    wchar_t *result = html_element(L"li", content, attributes);
-    free(attributes);
+    wchar_t *result;
+    if (escape_content) {
+        // Use html_element which automatically escapes content
+        result = html_element(L"li", content, attributes);
+    } else {
+        // Build element manually without escaping content
+        safe_buffer *buf = buffer_pool_get_global();
+        if (!buf) {
+            free(attributes);
+            return NULL;
+        }
 
+        safe_append(L"<li", buf);
+        if (attributes && wcslen(attributes) > 0) {
+            safe_append(L" ", buf);
+            safe_append(attributes, buf);
+        }
+        safe_append(L">", buf);
+        if (content) {
+            safe_append(content, buf);  // No escaping
+        }
+        safe_append(L"</li>", buf);
+
+        result = safe_buffer_to_string(buf);
+        buffer_pool_return_global(buf);
+    }
+
+    free(attributes);
     return result;
 }

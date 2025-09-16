@@ -186,7 +186,7 @@ wchar_t* html_navigation_links(const wchar_t *prev_href, const wchar_t *next_hre
     if (prev_href && prev_title) {
         safe_append(L"<div class=\"nav_prev\">", buf);
         safe_append(L"<span class=\"nav_label\">&laquo; newer</span>", buf);
-        wchar_t *prev_link = html_link(prev_href, prev_title, NULL);
+        wchar_t *prev_link = html_link(prev_href, prev_title, NULL, true);
         if (prev_link) {
             safe_append(L"<div class=\"nav_title\">", buf);
             safe_append(prev_link, buf);
@@ -200,7 +200,7 @@ wchar_t* html_navigation_links(const wchar_t *prev_href, const wchar_t *next_hre
     if (next_href && next_title) {
         safe_append(L"<div class=\"nav_next\">", buf);
         safe_append(L"<span class=\"nav_label\">older &raquo;</span>", buf);
-        wchar_t *next_link = html_link(next_href, next_title, NULL);
+        wchar_t *next_link = html_link(next_href, next_title, NULL, true);
         if (next_link) {
             safe_append(L"<div class=\"nav_title\">", buf);
             safe_append(next_link, buf);

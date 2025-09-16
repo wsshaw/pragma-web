@@ -133,7 +133,7 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	// Skip these to avoid double replacement
 
 	// Replace page-specific TITLE token (different from TITLE_FOR_META)
-	wchar_t* title_element = html_heading(3, page->title, NULL);
+	wchar_t* title_element = html_heading(3, page->title, NULL, true);
 	temp = template_replace_token(page_output, L"TITLE", title_element);
 	if (temp) {
 		free(page_output);

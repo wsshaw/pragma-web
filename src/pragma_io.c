@@ -563,7 +563,7 @@ void load_site_icons(char *root, char *subdir, site_info *config) {
 * returns:
 *  bool (true if successfully updated, false on error)
 */
-bool update_source_file_with_static_icon(const char *source_path, const wchar_t *icon_name) {
+bool update_source_file_with_static_icon(char *source_path, const wchar_t *icon_name) {
 	// Read the current file content
 	wchar_t *content = read_file_contents(source_path);
 	if (!content) {

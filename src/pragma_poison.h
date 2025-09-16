@@ -244,8 +244,8 @@ bool check_dir( const utf8_path p, int mode );
 wchar_t* build_url(const wchar_t *base_url, const wchar_t *path);
 void usage();
 void build_new_pragma_site( char *t );
-wchar_t *read_file_contents(const utf8_path path);
-int write_file_contents(const utf8_path path, const wchar_t *content);
+wchar_t *read_file_contents(utf8_path path);
+int write_file_contents(utf8_path path, const wchar_t *content);
 pp_page* load_site(int operation, char* directory, time_t since_time);
 wchar_t* parse_markdown(wchar_t *markdown);
 void append(wchar_t *string, wchar_t *result, size_t *j);
@@ -284,14 +284,14 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 wchar_t* html_escape(const wchar_t *text);
 wchar_t* html_element(const wchar_t *tag, const wchar_t *content, const wchar_t *attributes);
 wchar_t* html_self_closing(const wchar_t *tag, const wchar_t *attributes);
-wchar_t* html_link(const wchar_t *href, const wchar_t *text, const wchar_t *css_class);
+wchar_t* html_link(const wchar_t *href, const wchar_t *text, const wchar_t *css_class, bool escape_content);
 wchar_t* html_image(const wchar_t *src, const wchar_t *alt, const wchar_t *css_class);
 wchar_t* html_image_with_caption(const wchar_t *src, const wchar_t *alt, const wchar_t *caption, const wchar_t *css_class);
 wchar_t* html_image_gallery(const wchar_t *directory_path, const wchar_t *css_class);
 wchar_t* html_div(const wchar_t *content, const wchar_t *css_class);
-wchar_t* html_heading(int level, const wchar_t *text, const wchar_t *css_class);
-wchar_t* html_paragraph(const wchar_t *text, const wchar_t *css_class);
-wchar_t* html_list_item(const wchar_t *content, const wchar_t *css_class);
+wchar_t* html_heading(int level, const wchar_t *text, const wchar_t *css_class, bool escape_content);
+wchar_t* html_paragraph(const wchar_t *text, const wchar_t *css_class, bool escape_content);
+wchar_t* html_list_item(const wchar_t *content, const wchar_t *css_class, bool escape_content);
 
 // HTML component generation functions
 wchar_t* html_post_icon(const wchar_t *icon_filename);

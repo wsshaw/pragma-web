@@ -60,7 +60,7 @@ void md_header(wchar_t *line, safe_buffer *output) {
 		level++;
 
 	// Build header HTML using the new HTML element function
-	wchar_t *heading = html_heading(level, line + level + 1, NULL);
+	wchar_t *heading = html_heading(level, line + level + 1, NULL, false);
 	if (heading) {
 		safe_append(heading, output);
 		safe_append(L"\n", output);
@@ -85,7 +85,7 @@ void md_paragraph(wchar_t *line, safe_buffer *output) {
 	if (output == NULL) { printf("Output is null \n"); }
 	if (line == NULL) { printf("Line is null \n"); }
 
-	wchar_t *paragraph = html_paragraph(line, NULL);
+	wchar_t *paragraph = html_paragraph(line, NULL, false);
 	if (paragraph) {
 		safe_append(paragraph, output);
 		safe_append(L"\n", output);
@@ -107,7 +107,7 @@ void md_paragraph(wchar_t *line, safe_buffer *output) {
  *  void
  */
 void md_list(wchar_t *line, safe_buffer *output) {
-	wchar_t *list_item = html_list_item(line + 2, NULL);
+	wchar_t *list_item = html_list_item(line + 2, NULL, false);
 	if (list_item) {
 		safe_append(list_item, output);
 		safe_append(L"\n", output);
@@ -318,7 +318,7 @@ void md_inline(wchar_t *original, safe_buffer *output, md_parser_state *state) {
 			link_url[link_url_length] = L'\0';
 
 			// Construct the <a> tag using the HTML function
-			wchar_t *link_tag = html_link(link_url, link_text, NULL);
+			wchar_t *link_tag = html_link(link_url, link_text, NULL, false);
 			if (link_tag) {
 				safe_append(link_tag, output);
 				free(link_tag);
