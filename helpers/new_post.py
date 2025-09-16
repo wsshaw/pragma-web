@@ -6,16 +6,16 @@ import subprocess
 import random
 from datetime import datetime
 
-# pragma-new: emit a template for a new pragma web page source and write it to disk.
+# new_post.py: emit a template for a new pragma-web page source and write it to disk.
 # 
 # By default, this helper creates a template for a post on the current date, but it
 # accepts an argument if the user would like to backdate (or future-date) a post. 
 #
-# usage: ./pragma-new [Month DD YYY HH:MM]
+# usage: ./new_post.py [Month DD YYY HH:MM]
 #
-# example: ./pragma-new January 1 2001 15:30
+# example: ./new_post.py January 1 2001 15:30
 #
-# Because pragma-web works backwards from the current system time when publishing the
+# Because pragma-web works backwards from the current system time when publishing a
 # site, it will not publish future-dated posts, so they are inherently drafts until
 # their publication time arrives. Or until someone changes the system time.
 
@@ -41,15 +41,16 @@ def load_dictionary_words():
             except:
                 continue
 
-    # Fallback word list if no system dictionary found
+    # Fallback word list if no system dictionary found (ICAO phonetic).
+    # ..i mean, C(26,3)= 26!/3!(23)! = plenty, but not many distinctive/memorable names
     if not words:
         words = [
-            'apple', 'brave', 'cloud', 'dream', 'earth', 'flame', 'green', 'happy',
-            'idea', 'jump', 'kind', 'light', 'magic', 'north', 'ocean', 'peace',
-            'quick', 'river', 'smile', 'tree', 'under', 'voice', 'water', 'young',
-            'dance', 'bright', 'swift', 'gentle', 'strong', 'quiet', 'warm', 'fresh'
+            "alfa", "bravo", "charlie", "delta", "echo", "foxtrot",
+            "golf", "hotel", "india", "juliet", "kilo", "lima",
+            "mike", "november", "oscar", "papa", "quebec", "romeo",
+            "sierra", "tango", "uniform", "victor", "whiskey",
+            "xray", "yankee", "zulu"
         ]
-
     return words
 
 def generate_filename():
@@ -57,7 +58,7 @@ def generate_filename():
     words = load_dictionary_words()
 
     # Try to generate a unique filename
-    max_attempts = 3 #let's be realistic...
+    max_attempts = 5 #let's be realistic
     for _ in range(max_attempts):
         # Select three random words
         selected_words = random.sample(words, 3)
@@ -111,11 +112,12 @@ if ( len(sys.argv[1:] ) > 0 ):
 suggested_filename = generate_filename()
 fn = get_user_filename(suggested_filename)
 
-output = """title:None
+# output skeleton with no placeholders = easier to edit
+output = """title:
 tags:
 summary:
 static_icon:
-parse:
+parse:false
 date:""" + str(now) + """
 ###
 Your content here (Markdown and/or HTML can mix freely, see README)"""
@@ -131,7 +133,9 @@ print("Created " + fn + ".")
 # directory in the Finder, and open the new template file in an editor. Portability should improve.
 #
 # By default, the pramga-new helper opens vim to edit the resulting file, but the invoked executable
-# can be changed to, e.g., TextEdit, VS Code, or even emacs.
+# can be changed to, e.g., TextEdit, VS Code, or even emacs. The helper will also open the image 
+# directory associated with this post in the macOS Finder; change or comment out this command if 
+# you are on a different platform or don't want this behavior. 
 subprocess.run(["mkdir", image_dir]);
 subprocess.run(["open", image_dir]);
 subprocess.run(["vim", fn]);
