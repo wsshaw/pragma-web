@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
     }
 
     wcscpy(config->base_dir, wchar_convert(opts.source_dir));
-    wprintf(L"%s\n", config->base_dir);
+    // wprintf(L"%s\n", config->base_dir); ??? old debugging?
 
     // Determine loading mode based on options
     int load_mode = LOAD_EVERYTHING; // default to full site load
@@ -257,7 +257,7 @@ int main(int argc, char *argv[]) {
     load_site_icons(opts.output_dir, char_convert(config->icons_dir), config);
 
     // Assign icons to pages
-    assign_icons(pages, config);
+    assign_icons(pages, config, opts.source_dir);
 
     // Build the site (unless dry run)
     if (!opts.dry_run) {

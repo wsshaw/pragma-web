@@ -9,7 +9,7 @@ pragma web builds a simple blog/site from Markdown sources. It reads a site conf
 
 ## What it does (site generation at a glance)
 - Loads site config (`pragma_config.yml`) and site sources from a directory; sources are plaintext HTML and/or Markdown. pragma-web expects filenames ending in .txt, but it shouldn't really matter (future refinements abound). 
-- Parses Markdown into HTML if source file does not specify `parse:false` (render headings, paragraphs, inline emphasis, code, images, basic lists)
+- Parses Markdown into HTML if source file does not specify `parse:no` (render headings, paragraphs, inline emphasis, code, images, basic lists). 
 - Builds:
   - `index.html`, `index1.html`, ... (paged, linked indices);
   - `s/index.html` (chronological scroll of all content, newest to oldest, which should probably also be paged like the indices);

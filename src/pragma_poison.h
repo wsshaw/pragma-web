@@ -268,7 +268,7 @@ wchar_t* string_from_int(long int n);
 wchar_t* wrap_with_element(wchar_t* text, wchar_t* start, wchar_t* close);
 void load_site_icons(char *root, char *subdir, site_info *config);
 void directory_to_array(const utf8_path path, char ***filenames, int *count);
-void assign_icons(pp_page *pages, site_info *config);
+void assign_icons(pp_page *pages, site_info *config, const char *source_dir);
 wchar_t* wchar_convert(const char* c);
 pp_page* get_item_by_key(time_t target, pp_page* list);
 wchar_t* build_tag_index(pp_page* pages, site_info* site);

@@ -334,6 +334,9 @@ site_info* load_site_yaml(char* path) {
 			wchar_t *value = line + wcslen(L"build_scroll:");
 			config->build_scroll = (wcsstr(value, L"yes") != NULL);
 		}
+		else if (wcsstr(line, L"---") != NULL) {
+			// clunky but I'm tired of seeing "unnown config option" for valid yaml
+		}
 		else // not a known or supported config option
 			wprintf(L"bypassing unknown configuration option %ls.\n", line);
 	}
@@ -548,14 +551,91 @@ void load_site_icons(char *root, char *subdir, site_info *config) {
 }
 
 /**
-* assign_icons(): give each post a randomly selected icon. Future updates should allow posts to
-* specify a stable icon.
+* update_source_file_with_static_icon(): Add static_icon field to source file if it doesn't exist.
+*
+* Reads the source file, finds the metadata section, and adds a static_icon line if needed.
+* Writes the modified content back to the file.
+*
+* arguments:
+*  const char *source_path (path to the source .txt file)
+*  const wchar_t *icon_name (icon filename to write)
+*
+* returns:
+*  bool (true if successfully updated, false on error)
+*/
+bool update_source_file_with_static_icon(const char *source_path, const wchar_t *icon_name) {
+	// Read the current file content
+	wchar_t *content = read_file_contents(source_path);
+	if (!content) {
+		printf("! Error: could not read source file '%s' to add static_icon\n", source_path);
+		return false;
+	}
+
+	// Check if static_icon already exists
+	if (wcsstr(content, L"static_icon:") != NULL) {
+		free(content);
+		return true; // Already has static_icon, nothing to do
+	}
+
+	// Find the metadata section (before the --- or ### separator)
+	wchar_t *separator = wcsstr(content, L"---");
+	if (!separator) {
+		separator = wcsstr(content, L"###");
+	}
+	if (!separator) {
+		free(content);
+		printf("! Error: could not find --- or ### separator in source file '%s'\n", source_path);
+		return false;
+	}
+
+	// Calculate position to insert static_icon line (just before the ---)
+	size_t separator_pos = separator - content;
+
+	// Create new content with static_icon line added
+	size_t new_content_size = wcslen(content) + wcslen(L"static_icon:") + wcslen(icon_name) + 10;
+	wchar_t *new_content = malloc(new_content_size * sizeof(wchar_t));
+	if (!new_content) {
+		free(content);
+		return false;
+	}
+
+	// Copy content up to separator
+	wcsncpy(new_content, content, separator_pos);
+	new_content[separator_pos] = L'\0';
+
+	// Add static_icon line
+	wcscat(new_content, L"static_icon:");
+	wcscat(new_content, icon_name);
+	wcscat(new_content, L"\n");
+
+	// Add the rest of the content (--- and beyond)
+	wcscat(new_content, separator);
+
+	// Write back to file
+	int result = write_file_contents(source_path, new_content);
+
+	free(content);
+	free(new_content);
+
+	if (result != 0) {
+		printf("! Error: could not write updated content to source file '%s'\n", source_path);
+		return false;
+	}
+
+	printf("-> Added static_icon:%ls to %s\n", icon_name, source_path);
+	return true;
+}
+
+/**
+* assign_icons(): give each post a randomly selected icon. Posts without static_icon will have
+* a random icon assigned and that assignment will be written back to their source file.
 *
 * arguments:
 *  pp_page *pages (linked list of all pages in the site)
 *  site_info *config (data structure containing the config info for this pragma site)
+*  const char *source_dir (path to the source directory containing the .txt files)
 */
-void assign_icons(pp_page *pages, site_info *config) {
+void assign_icons(pp_page *pages, site_info *config, const char *source_dir) {
 
 	// seed the random number generator
 	time_t t;
@@ -574,12 +654,17 @@ void assign_icons(pp_page *pages, site_info *config) {
 		
 		// Check if page has a static_icon specified and if file exists
 		if (wcslen(current->static_icon) > 0) {
-			// Build full path to static icon (relative to site root)
+			// Build full path to static icon in the icons directory
 			char *static_icon_path = malloc(512);
 			char *base_dir = char_convert(config->base_dir);
 			char *static_icon_str = char_convert(current->static_icon);
-			
-			snprintf(static_icon_path, 512, "%s%s", base_dir, static_icon_str);
+
+			// Handle path separator properly - check if base_dir ends with '/'
+			if (base_dir[strlen(base_dir)-1] == '/') {
+				snprintf(static_icon_path, 512, "%s%s%s", base_dir, SITE_ICONS, static_icon_str);
+			} else {
+				snprintf(static_icon_path, 512, "%s/%s%s", base_dir, SITE_ICONS, static_icon_str);
+			}
 			
 			// Check if file exists and is readable
 			struct stat stat_buf;
@@ -599,8 +684,33 @@ void assign_icons(pp_page *pages, site_info *config) {
 		
 		// If no static icon or file doesn't exist, use random icon
 		if (!used_static_icon) {
-			wchar_t *the_icon = wchar_convert(config->icons[ rand() % config->icon_sentinel ]);
+			char *selected_icon = config->icons[ rand() % config->icon_sentinel ];
+			wchar_t *the_icon = wchar_convert(selected_icon);
 			wcscpy(current->icon, the_icon);
+
+			// Update source file with the assigned icon (only if we originally had no static_icon)
+			if (wcslen(current->static_icon) == 0 && current->source_filename && wcslen(current->source_filename) > 0) {
+				// Build path to source file (add dat/ subdirectory like load_site does)
+				char *source_path = malloc(512);
+				char *source_filename_utf8 = char_convert(current->source_filename);
+
+				// Handle trailing slash in source_dir like load_site does
+				if (source_dir[strlen(source_dir)-1] == '/') {
+					snprintf(source_path, 512, "%sdat/%s.txt", source_dir, source_filename_utf8);
+				} else {
+					snprintf(source_path, 512, "%s/dat/%s.txt", source_dir, source_filename_utf8);
+				}
+
+				// Update the source file with the assigned icon
+				update_source_file_with_static_icon(source_path, the_icon);
+
+				// Update the page's static_icon field for consistency
+				wcscpy(current->static_icon, the_icon);
+
+				free(source_path);
+				free(source_filename_utf8);
+			}
+
 			free(the_icon);
 		}
 	}
