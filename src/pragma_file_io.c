@@ -373,6 +373,12 @@ bool source_file_exists(const char *html_filename, const char *source_dir) {
         *dot = '\0';  // Remove .html extension
     }
 
+    // Skip files that begin with '.' (vim swap files, hidden files, etc.)
+    if (base_name[0] == '.') {
+        free(base_name);
+        return false;
+    }
+
     // Build path to corresponding .txt file in dat/ subdirectory
     char source_path[1024];
     snprintf(source_path, sizeof(source_path), "%s/dat/%s.txt", source_dir, base_name);

@@ -426,8 +426,8 @@ pp_page* load_site( int operation, char* directory, time_t since_time ) {
 	if ((dir = utf8_opendir(source_directory)) != NULL) {
 		while ((ent = readdir(dir)) != NULL) {
 			// The new post generator (helper tool) will create files with a datestamp + .txt.  This code
-			// should be smarter about matching that format and avoiding stuff like vim swap files. 
-			if (strstr(ent->d_name, ".txt") != NULL) {
+			// should be smarter about matching that format and avoiding stuff like vim swap files.
+			if (strstr(ent->d_name, ".txt") != NULL && ent->d_name[0] != '.') {
 			utf8_path filename = malloc(strlen(source_directory) + strlen(ent->d_name) + 1);
 			if (!filename) {
 				printf("! Error: malloc failed for filename in load_site()\n");
