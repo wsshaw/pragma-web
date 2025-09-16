@@ -76,7 +76,7 @@ L"<html lang=\"en\" prefix=\"og: https://ogp.me/ns#\">"\
 L"<head>"\
 L"<meta charset=\"utf-8\">"\
 L"<meta name=\"generator\" content=\"pragma-web\">"\
-L"<meta property=\"og:title\" content=\"{TITLE}\">"\
+L"<meta property=\"og:title\" content=\"{TITLE_FOR_META}\">"\
 L"<meta property=\"og:description\" content=\"{DESCRIPTION}\">"\
 L"<meta property=\"og:type\" content=\"article\">"\
 L"<meta property=\"og:locale\" content=\"en\">"\
