@@ -278,7 +278,7 @@ bool page_is_tagged(pp_page* p, wchar_t *t);
 void swap(tag_dict *a, tag_dict *b);
 void sort_tag_list(tag_dict *head);
 bool split_before(wchar_t *delim, const wchar_t *input, wchar_t *output);
-wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title, const wchar_t *page_description);
+wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title, const wchar_t *page_description, const wchar_t *page_icon);
 
 // HTML element generation functions
 wchar_t* html_escape(const wchar_t *text);

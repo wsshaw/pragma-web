@@ -305,11 +305,13 @@ void free_page_list(pp_page *head) {
  *  site_info *site (site configuration; must not be NULL)
  *  const wchar_t *page_url (URL for this page; may be NULL for empty replacement)
  *  const wchar_t *page_title (title for meta tags; may be NULL for site name)
+ *  const wchar_t *page_description (description for meta tags; may be NULL for empty)
+ *  const wchar_t *page_icon (icon for this page; may be NULL to use default image)
  *
  * returns:
  *  wchar_t* (processed HTML with tokens replaced; caller must free)
  */
-wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title, const wchar_t *page_description) {
+wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title, const wchar_t *page_description, const wchar_t *page_icon) {
 	if (!output || !site)
 		return output;
 
@@ -338,21 +340,38 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 		result = temp;
 	}
 	// Note: {TAGS} and {DATE} are handled by individual page builders
-	// Build full URL for default image
-	wchar_t *full_default_image;
-	if (wcsstr(site->default_image, L"://")) {
-		// Already a full URL
-		full_default_image = wcsdup(site->default_image);
+	// Build full URL for page image (icon or default)
+	wchar_t *full_image_url;
+	if (page_icon && wcslen(page_icon) > 0) {
+		// Use page icon - build full URL
+		wchar_t *icon_path = malloc((wcslen(L"img/icons/") + wcslen(page_icon) + 1) * sizeof(wchar_t));
+		if (icon_path) {
+			wcscpy(icon_path, L"img/icons/");
+			wcscat(icon_path, page_icon);
+			full_image_url = build_url(site->base_url, icon_path);
+			free(icon_path);
+		} else {
+			full_image_url = NULL;
+		}
 	} else {
-		// Make it a full URL using utility function
-		full_default_image = build_url(site->base_url, site->default_image);
+		// Use default image
+		if (wcsstr(site->default_image, L"://")) {
+			// Already a full URL
+			full_image_url = wcsdup(site->default_image);
+		} else {
+			// Make it a full URL using utility function
+			full_image_url = build_url(site->base_url, site->default_image);
+		}
 	}
-	temp = template_replace_token(result, L"MAIN_IMAGE", full_default_image);
-	if (temp) {
-		free(result);
-		result = temp;
+
+	if (full_image_url) {
+		temp = template_replace_token(result, L"MAIN_IMAGE", full_image_url);
+		if (temp) {
+			free(result);
+			result = temp;
+		}
+		free(full_image_url);
 	}
-	free(full_default_image);
 
 	temp = template_replace_token(result, L"SITE_NAME", site->site_name);
 	if (temp) {

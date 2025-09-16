@@ -147,7 +147,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 		swprintf(index_description, 256, L"Index of all posts on %ls", site->site_name);
 	}
 
-	wchar_t *processed_output = apply_common_tokens(index_output, site, actual_url, site->site_name, index_description);
+	wchar_t *processed_output = apply_common_tokens(index_output, site, actual_url, site->site_name, index_description, NULL);
 	free(index_output);
 	free(actual_url);
 	if (index_description) {

@@ -56,7 +56,7 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 		wchar_t *scroll_url = build_url(site->base_url, L"s/");
 		
 		// Apply common token replacements
-		wchar_t *temp_scroll = apply_common_tokens(empty_scroll, site, scroll_url, L"#pragma poison | all posts", L"Chronological index of all posts");
+		wchar_t *temp_scroll = apply_common_tokens(empty_scroll, site, scroll_url, L"#pragma poison | all posts", L"Chronological index of all posts", NULL);
 		free(empty_scroll);
 		empty_scroll = temp_scroll;
 		
@@ -188,7 +188,7 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	// Use "all posts" as page title - the template will combine it with site name
 	wchar_t scroll_description[256];
 	swprintf(scroll_description, 256, L"Chronological index of all posts on %ls", site->site_name);
-	wchar_t *final_output = apply_common_tokens(scroll_output, site, scroll_url, L"all posts", scroll_description);
+	wchar_t *final_output = apply_common_tokens(scroll_output, site, scroll_url, L"all posts", scroll_description, NULL);
 
 	free(scroll_url);
 	free(scroll_output);
