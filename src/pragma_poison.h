@@ -44,7 +44,7 @@ wchar_t* utf8_to_wchar(const utf8_path utf8_str);
                 
 #define PRAGMA_DEBUG	0
 
-#define PRAGMA_USAGE	"Usage: pragma -s [source] -o [output]\n\nwhere [source] is the site source directory and [output] is where you want the rendered site.\n\n\t-f: regenerate all html for all nodes\n\t-d: dry run, status report only\n\t-u: regenerate html only for nodes whose source was modified since last successful run\n\t-n: generate html output for new nodes (i.e., created since last run)\n\t-h: show this 'help'\n\nPlease see README.txt for usage details and examples.\n\n"
+#define PRAGMA_USAGE	"Usage: pragma -s [source] -o [output]\n\nwhere [source] is the site source directory and [output] is where you want the rendered site.\n\n\t-f: regenerate all html for all nodes\n\t-d: dry run, status report only\n\t-u: regenerate html only for nodes whose source was modified since last successful run\n\t-n: generate html output for new nodes (i.e., created since last run)\n\t-x: clean up stale pragma-generated files after build\n\t-h: show this 'help'\n\nPlease see README.txt for usage details and examples.\n\n"
 
 /**
 * Default file contents when creating a new site.  Some of these strings are hideous, but I prefer
@@ -401,4 +401,8 @@ typedef struct {
     bool new_only;
     bool dry_run;
     bool show_help;
+    bool clean_stale;
 } pragma_options;
+
+// Stale file cleanup
+void cleanup_stale_files(const char *source_dir, const char *output_dir);

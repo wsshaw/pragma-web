@@ -25,7 +25,7 @@ int parse_arguments(int argc, char *argv[], pragma_options *opts) {
     memset(opts, 0, sizeof(pragma_options));
 
     // Parse options using getopt
-    while ((option = getopt(argc, argv, "s:o:c:funhd")) != -1) {
+    while ((option = getopt(argc, argv, "s:o:c:funhdx")) != -1) {
         switch (option) {
             case 's':
                 opts->source_dir = optarg;
@@ -51,6 +51,9 @@ int parse_arguments(int argc, char *argv[], pragma_options *opts) {
                 break;
             case 'h':
                 opts->show_help = true;
+                break;
+            case 'x':
+                opts->clean_stale = true;
                 break;
             case '?':
                 // getopt prints error message for unknown options
@@ -344,6 +347,11 @@ int main(int argc, char *argv[]) {
         update_last_run_time(opts.source_dir);
 
         printf("=> Site generation complete.\n");
+
+        // Clean up stale files if requested
+        if (opts.clean_stale) {
+            cleanup_stale_files(opts.source_dir, opts.output_dir);
+        }
     } else {
         printf("=> Dry run complete - no files written\n");
     }
