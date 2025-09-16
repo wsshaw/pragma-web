@@ -49,7 +49,7 @@ wchar_t* html_post_icon(const wchar_t *icon_filename) {
     if (!img) return NULL;
 
     // Wrap in post_icon div
-    wchar_t *result = html_div(img, L"post_icon");
+    wchar_t *result = html_div(img, L"post_icon", false);
     free(img);
 
     return result;
@@ -148,13 +148,13 @@ wchar_t* html_post_card_header(const wchar_t *icon_filename, const wchar_t *titl
     }
 
     // Wrap in post_head div, then post_card div
-    wchar_t *head_div = html_div(head_content, L"post_head");
+    wchar_t *head_div = html_div(head_content, L"post_head", false);
     free(head_content);
     buffer_pool_return_global(buf);
 
     if (!head_div) return NULL;
 
-    wchar_t *result = html_div(head_div, L"post_card");
+    wchar_t *result = html_div(head_div, L"post_card", false);
     free(head_div);
 
     return result;
@@ -239,7 +239,7 @@ wchar_t* html_navigation_links(const wchar_t *prev_href, const wchar_t *next_hre
 wchar_t* html_post_in_index(const wchar_t *content) {
     if (!content) return NULL;
 
-    return html_div(content, L"post_in_index");
+    return html_div(content, L"post_in_index", false);
 }
 
 /**
@@ -310,7 +310,7 @@ wchar_t* html_complete_post_card(const wchar_t *icon_filename, const wchar_t *ti
     free(header);
 
     // Add post content wrapped in post_body div
-    wchar_t *body_div = html_div(post_content, L"post_body");
+    wchar_t *body_div = html_div(post_content, L"post_body", false);
     if (!body_div) {
         buffer_pool_return_global(buf);
         return NULL;

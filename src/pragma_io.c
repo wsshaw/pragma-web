@@ -744,6 +744,14 @@ void directory_to_array(const utf8_path path, char ***filenames, int *count) {
 		if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) 
 			(*count)++;
 
+	// Allocate the filenames array based on count
+	*filenames = malloc(*count * sizeof(char*));
+	if (!*filenames) {
+		closedir(dir);
+		*count = 0;
+		return;
+	}
+
 	// roll it back and get the acutal names
 	rewinddir(dir);
 	int i = 0;

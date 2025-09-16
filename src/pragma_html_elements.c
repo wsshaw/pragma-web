@@ -61,7 +61,7 @@ wchar_t* html_escape(const wchar_t *text) {
  * returns:
  *  wchar_t* (heap-allocated HTML element; NULL on error)
  */
-wchar_t* html_element(const wchar_t *tag, const wchar_t *content, const wchar_t *attributes) {
+wchar_t* html_element(const wchar_t *tag, const wchar_t *content, const wchar_t *attributes, bool escape_content) {
     if (!tag) return NULL;
 
     safe_buffer *buf = buffer_pool_get_global();
@@ -78,9 +78,9 @@ wchar_t* html_element(const wchar_t *tag, const wchar_t *content, const wchar_t 
 
     safe_append(L">", buf);
 
-    // Add content (with automatic escaping)
+    // Add content (with conditional escaping)
     if (content) {
-        buf->auto_escape = true;
+        buf->auto_escape = escape_content;
         safe_append(content, buf);
         buf->auto_escape = false;
     }
@@ -181,7 +181,7 @@ wchar_t* html_link(const wchar_t *href, const wchar_t *text, const wchar_t *css_
     wchar_t *result;
     if (escape_content) {
         // Use html_element which automatically escapes content
-        result = html_element(L"a", text, attributes);
+        result = html_element(L"a", text, attributes, true);
     } else {
         // Build element manually without escaping content
         safe_append(L"<a ", buf);
@@ -264,7 +264,7 @@ wchar_t* html_image(const wchar_t *src, const wchar_t *alt, const wchar_t *css_c
  * returns:
  *  wchar_t* (heap-allocated div element; NULL on error)
  */
-wchar_t* html_div(const wchar_t *content, const wchar_t *css_class) {
+wchar_t* html_div(const wchar_t *content, const wchar_t *css_class, bool escape_content) {
     wchar_t *attributes = NULL;
 
     if (css_class && wcslen(css_class) > 0) {
@@ -283,7 +283,7 @@ wchar_t* html_div(const wchar_t *content, const wchar_t *css_class) {
         if (!attributes) return NULL;
     }
 
-    wchar_t *result = html_element(L"div", content, attributes);
+    wchar_t *result = html_element(L"div", content, attributes, escape_content);
     free(attributes);
 
     return result;
@@ -334,7 +334,7 @@ wchar_t* html_heading(int level, const wchar_t *text, const wchar_t *css_class, 
     wchar_t *result;
     if (escape_content) {
         // Use html_element which automatically escapes content
-        result = html_element(tag, text, attributes);
+        result = html_element(tag, text, attributes, true);
     } else {
         // Build element manually without escaping content
         safe_buffer *buf = buffer_pool_get_global();
@@ -398,7 +398,7 @@ wchar_t* html_paragraph(const wchar_t *text, const wchar_t *css_class, bool esca
     wchar_t *result;
     if (escape_content) {
         // Use html_element which automatically escapes content
-        result = html_element(L"p", text, attributes);
+        result = html_element(L"p", text, attributes, true);
     } else {
         // Build element manually without escaping content
         safe_buffer *buf = buffer_pool_get_global();
@@ -455,7 +455,7 @@ wchar_t* html_image_with_caption(const wchar_t *src, const wchar_t *alt, const w
     if (!img_element) return NULL;
 
     // Create the figcaption element
-    wchar_t *figcaption = html_element(L"figcaption", caption, NULL);
+    wchar_t *figcaption = html_element(L"figcaption", caption, NULL, true);
     if (!figcaption) {
         free(img_element);
         return NULL;
@@ -505,7 +505,7 @@ wchar_t* html_image_with_caption(const wchar_t *src, const wchar_t *alt, const w
     }
 
     // Create the figure element
-    wchar_t *result = html_element(L"figure", figure_content, attributes);
+    wchar_t *result = html_element(L"figure", figure_content, attributes, false);
 
     free(figure_content);
     free(attributes);
@@ -541,7 +541,7 @@ wchar_t* html_image_gallery(const wchar_t *directory_path, const wchar_t *css_cl
 
     if (!filenames || count == 0) {
         // Return empty gallery div if directory is empty or doesn't exist
-        return html_div(L"", css_class ? css_class : L"gallery");
+        return html_div(L"", css_class ? css_class : L"gallery", false);
     }
 
     // Build gallery content
@@ -593,7 +593,7 @@ wchar_t* html_image_gallery(const wchar_t *directory_path, const wchar_t *css_cl
     if (!gallery_content) return NULL;
 
     // Wrap in gallery div
-    wchar_t *result = html_div(gallery_content, css_class ? css_class : L"gallery");
+    wchar_t *result = html_div(gallery_content, css_class ? css_class : L"gallery", false);
     free(gallery_content);
 
     return result;
@@ -634,7 +634,7 @@ wchar_t* html_list_item(const wchar_t *content, const wchar_t *css_class, bool e
     wchar_t *result;
     if (escape_content) {
         // Use html_element which automatically escapes content
-        result = html_element(L"li", content, attributes);
+        result = html_element(L"li", content, attributes, true);
     } else {
         // Build element manually without escaping content
         safe_buffer *buf = buffer_pool_get_global();
