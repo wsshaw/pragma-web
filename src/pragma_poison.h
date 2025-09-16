@@ -34,7 +34,7 @@ wchar_t* utf8_to_wchar(const utf8_path utf8_str);
 #define SITE_SOURCES_DEFAULT_SUBDIR	"dat/"
 
 // Site structure (relative paths within site root)
-// Note: SITE_SOURCES and SITE_ROOT are now specified via command line arguments only
+// Note: SITE_SOURCES and SITE_ROOT are now specified via command line arguments only. 
 #define SITE_POSTS	"c/"			// Directory (within SITE_ROOT) for all generated posts
 #define SITE_SCROLL	"s/"			// Directory (within SITE_ROOT) for the scroll, i.e. index of all posts by date
 #define SITE_TAG_INDEX	"t/"			// Directory (within SITE_ROOT) for the indices of posts per tag
@@ -395,14 +395,14 @@ void buffer_pool_return_global(safe_buffer *buf);
 typedef struct {
     char *source_dir;
     char *output_dir;
-    bool create_site;
-    bool force_all;
+    bool create_site;   // make a new pragma-web site
+    bool force_all;     // force update
     bool updated_only;
     bool new_only;
     bool dry_run;
     bool show_help;
-    bool clean_stale;
+    bool clean_stale;   // whether we want to delete orphaned html files, i.e. files that are pragma generated but have no corresponding data source in this site
 } pragma_options;
 
-// Stale file cleanup
+// Stale file cleanup function 
 void cleanup_stale_files(const char *source_dir, const char *output_dir);
