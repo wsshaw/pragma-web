@@ -347,7 +347,7 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 	wchar_t *tag_output = malloc(123456 * sizeof(wchar_t));
 	wcscpy(tag_output, site->header);
 
-	wcscat(tag_output, L"<h3>View as: <a href=\"/s/\">scroll</a> | tag index</h3>\n");
+	wcscat(tag_output, L"<div class=\"post_card\"><h3>View as: <a href=\"/s/\">scroll</a> | tag index</h3>\n");
 
 	wcscat(tag_output, L"<h2>Tag Index</h2>\n<ul>\n");
 	
@@ -446,7 +446,7 @@ wchar_t* build_tag_index(pp_page* pages, site_info* site) {
 
 	printf("\n=> tag index generation complete\n");
 
-	wcscat(tag_output, L"</ul>\n");
+	wcscat(tag_output, L"</ul>\n</div>\n");
 	wcscat(tag_output, L"<hr>\n");
 	wcscat(tag_output, site->footer);
 	// Cleanup pre-parsed page data
