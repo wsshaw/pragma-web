@@ -73,13 +73,14 @@ int parse_arguments(int argc, char *argv[], pragma_options *opts) {
  *  pragma_options *opts (parsed options)
  *
  * returns:
- *  int (0 if valid, -1 if invalid)
+ *  int (0 if valid, -1 if invalid, 1 if we just show usage and exit, 2 for create site,
+ * which really needs to be documented somewhere and not use magic numbers) 
  */
 int validate_options(pragma_options *opts) {
     // Handle immediate actions first
     if (opts->show_help) {
         usage();
-        return 1; // Special return code for help (should exit successfully)
+        return 1; // user requested -h (help)
     }
 
     if (opts->create_site) {
@@ -127,12 +128,13 @@ int validate_options(pragma_options *opts) {
         return -1;
     }
 
-    // Validate conflicting options
+    // Validate conflicting options instead of just blasting on through with -f 
     if (opts->force_all && opts->updated_only) {
         printf("Error: cannot specify both -f (force all) and -u (updated only)\n");
         return -1;
     }
 
+    // same with -u / -n, though it's a little less egregious 
     if (opts->updated_only && opts->new_only) {
         printf("Error: cannot specify both -u (updated only) and -n (new only)\n");
         return -1;
@@ -192,14 +194,19 @@ int main(int argc, char *argv[]) {
         exit(EXIT_SUCCESS);
     }
 
+    // Initialize logging system
+    log_level_t log_level = LOG_INFO;  // Default to info level
+    bool quiet_mode = opts.dry_run;    // Quiet mode for dry runs
+    log_init(log_level, quiet_mode);
+
     // At this point we have valid source and output directories
-    printf("=> Using source directory %s\n", opts.source_dir);
-    printf("=> Using output directory %s\n", opts.output_dir);
+    log_info("Using source directory %s", opts.source_dir);
+    log_info("Using output directory %s", opts.output_dir);
 
     // Set up posts output directory
     posts_output_directory = malloc(strlen(opts.output_dir) + strlen(SITE_POSTS) + 64);
     if (posts_output_directory == NULL) {
-        printf("Error: can't allocate memory for posts output path\n");
+        log_fatal("can't allocate memory for posts output path");
         exit(EXIT_FAILURE);
     }
 
@@ -212,7 +219,7 @@ int main(int argc, char *argv[]) {
     // Load site configuration
     site_info* config = load_site_yaml(opts.source_dir);
     if (config == NULL) {
-        printf("Error: Can't proceed without site configuration! Aborting.\n");
+        log_fatal("Can't proceed without site configuration! Aborting.");
         free(posts_output_directory);
         exit(EXIT_FAILURE);
     }
@@ -227,24 +234,24 @@ int main(int argc, char *argv[]) {
     if (opts.updated_only) {
         load_mode = LOAD_UPDATED_ONLY;
         since_time = get_last_run_time(opts.source_dir);
-        printf("=> Loading files updated since last run\n");
+        log_info("Loading files updated since last run");
     } else if (opts.new_only) {
         // TODO: Implement new-only mode
-        printf("=> New-only mode not yet implemented, loading everything\n");
+        log_info("New-only mode not yet implemented, loading everything");
     } else if (opts.force_all) {
-        printf("=> Force rebuilding all files\n");
+        log_info("Force rebuilding all files");
     }
 
     if (opts.dry_run) {
-        printf("=> DRY RUN MODE: No files will be written\n");
+        log_info("DRY RUN MODE: No files will be written");
     }
 
-	printf("=> load = %d", load_mode);
+	log_debug("load = %d", load_mode);
     // Load the site sources
     pp_page* pages = load_site(load_mode, opts.source_dir, since_time);
 
     if (pages == NULL) {
-        printf("Error: no pages found or loaded\n");
+        log_error("no pages found or loaded");
         free(posts_output_directory);
         free_site_info(config);
         exit(EXIT_FAILURE);
@@ -268,7 +275,7 @@ int main(int argc, char *argv[]) {
         pp_page *current_page = pages;
         int page_count = 0;
         while (current_page != NULL) {
-            printf("=> Building page %d: %ls (tags: %ls)\n", ++page_count,
+            log_info("Building page %d: %ls (tags: %ls)", ++page_count,
                    current_page->title ? current_page->title : L"[no title]",
                    current_page->tags ? current_page->tags : L"[no tags]");
             wchar_t *page_html = build_single_page(current_page, config);
@@ -276,11 +283,11 @@ int main(int argc, char *argv[]) {
                 write_single_page(current_page, posts_output_directory, page_html);
                 free(page_html);
             } else {
-                printf("=> ERROR: build_single_page returned NULL for page %d\n", page_count);
+                log_error("build_single_page returned NULL for page %d", page_count);
             }
             current_page = current_page->next;
         }
-        printf("=> Built %d individual pages.\n", page_count);
+        log_info("Built %d individual pages.", page_count);
         // Build index pages
         if (config->index_size > 0) {
             // Count total pages to determine how many index pages we need
@@ -290,7 +297,7 @@ int main(int argc, char *argv[]) {
             }
 
             int total_index_pages = (total_posts + config->index_size - 1) / config->index_size; // Ceiling division
-            printf("=> building %d index pages for %d posts...\n", total_index_pages, total_posts);
+            log_info("building %d index pages for %d posts...", total_index_pages, total_posts);
 
             for (int page_num = 0; page_num < total_index_pages; page_num++) {
                 wchar_t *index_html = build_index(pages, config, page_num);
@@ -311,7 +318,7 @@ int main(int argc, char *argv[]) {
 
         // Build scroll (chronological index)
         if (config->build_scroll) {
-			printf("=> building scroll...\n");
+			log_info("building scroll...");
             wchar_t *scroll_html = build_scroll(pages, config);
             if (scroll_html) {
                 char scroll_path[1024];
@@ -323,7 +330,7 @@ int main(int argc, char *argv[]) {
 
         // Build tag indices
         if (config->build_tags) {
-			printf("=> building tag indices...\n");
+			log_info("building tag indices...");
             wchar_t *tag_html = build_tag_index(pages, config);
             if (tag_html) {
                 char tag_path[1024];
@@ -334,7 +341,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Build RSS feed
-		printf("=> generating RSS feed...\n");
+		log_info("generating RSS feed...");
         wchar_t *rss_xml = build_rss(pages, config);
         if (rss_xml) {
             char rss_path[1024];
@@ -346,14 +353,14 @@ int main(int argc, char *argv[]) {
         // Update last run time
         update_last_run_time(opts.source_dir);
 
-        printf("=> Site generation complete.\n");
+        log_info("Site generation complete.");
 
         // Clean up stale files if requested
         if (opts.clean_stale) {
             cleanup_stale_files(opts.source_dir, opts.output_dir);
         }
     } else {
-        printf("=> Dry run complete - no files written\n");
+        log_info("Dry run complete - no files written");
     }
 
     // Cleanup

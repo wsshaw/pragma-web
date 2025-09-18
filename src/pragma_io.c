@@ -22,14 +22,14 @@
 */
 pp_page* parse_file(const utf8_path filename) {
 	if (PRAGMA_DEBUG)
-		printf("parse_file() => %s\n", filename);
+		log_debug("parse_file() => %s", filename);
 	wchar_t line[MAX_LINE_LENGTH];
 	pp_page* page = malloc(sizeof(pp_page));
 	struct stat file_meta;
 
 	// Memory problem trying to make space for the page: 
 	if (page == NULL) {
-		printf("Can't allocate memory for page while trying to read %s!\n", filename);
+		log_error("Can't allocate memory for page while trying to read %s!", filename);
 		return NULL;
 	}
 
@@ -80,13 +80,13 @@ pp_page* parse_file(const utf8_path filename) {
 
 	FILE* file = utf8_fopen(filename, "r");
 	if (file == NULL) {
-		printf("Error opening file while trying to read %s\n", filename);
+		log_error("Error opening file while trying to read %s", filename);
 		free_page(page);
 		return NULL;
 	}
 
 	if (utf8_stat(filename, &file_meta) != 0) {
-		printf("Error reading file information for %s\n", filename);
+		log_error("Error reading file information for %s", filename);
 		free_page(page);	
 		fclose(file);
 		return NULL;
@@ -96,7 +96,7 @@ pp_page* parse_file(const utf8_path filename) {
 	page->last_modified = file_meta.st_mtime;
 
 	if (page->content == NULL) {
-		printf("Can't allocate memory for page content while trying to read %s!\n", filename);
+		log_error("Can't allocate memory for page content while trying to read %s!", filename);
 		// clean things up if we run into trouble here
 		free_page(page);
 		fclose(file);
@@ -171,7 +171,7 @@ pp_page* parse_file(const utf8_path filename) {
 			wchar_t* temp = realloc(page->content, content_size * sizeof(wchar_t));
 			if (temp == NULL) {
 				// Something's wrong with memory allocation, so get out as cleanly as we can
-				wprintf(L"! Error: can't reallocate memory to hold contents of %ls!", page->title);
+				log_error("can't reallocate memory to hold contents of %ls!", page->title);
 				free_page(page);
 				fclose(file);
 				return NULL;
@@ -209,7 +209,7 @@ site_info* load_site_yaml(char* path) {
 	FILE* file = utf8_fopen(yaml, "r");
 	if (file == NULL) {
 		// or bail if we can't open it at all
-		wprintf(L"! Error: can't open yaml configuration file %s!\n", yaml);
+		log_error("can't open yaml configuration file %s!", yaml);
 		return NULL;
 	}
 
@@ -314,7 +314,7 @@ site_info* load_site_yaml(char* path) {
 			if (config->index_size < 1) { 
 				// either wcstol failed--a condition we might want to check for separately--or 
 				// config file is hosed, so find a reasonable default instead of breaking
-				wprintf(L"invalid index size in config file! Defaulting to 10.\n");
+				log_warn("invalid index size in config file! Defaulting to 10.");
 				config->index_size = 10;
 			}
 		}
@@ -338,28 +338,28 @@ site_info* load_site_yaml(char* path) {
 			// clunky but I'm tired of seeing "unnown config option" for valid yaml
 		}
 		else // not a known or supported config option
-			wprintf(L"bypassing unknown configuration option %ls.\n", line);
+			log_warn("bypassing unknown configuration option %ls.", line);
 	}
 
 	fclose(file);
 
 	// Print concise configuration summary
-	printf("Site configuration: %ls, index_size=%d",
+	log_info("Site configuration: %ls, index_size=%d",
 	       config->site_name ? config->site_name : L"[no name]",
 	       config->index_size);
 
 	// Add feature flags
-	if (config->include_js) printf(", js");
-	if (config->build_tags) printf(", tags");
-	if (config->build_scroll) printf(", scroll");
-	printf("\n");
+	if (config->include_js) log_info(", js");
+	if (config->build_tags) log_info(", tags");
+	if (config->build_scroll) log_info(", scroll");
+	log_info("");
 
 	// Override base_url with environment variable if set (for local testing)
 	char *local_base = getenv("PRAGMA_LOCAL_BASE");
 	if (local_base) {
-		printf("=> PRAGMA_LOCAL_BASE detected: %s\n", local_base);
-		printf("=> This option will generate a site with URLs that are probably not suitable for production.\n");
-		printf("=> Continue? (Press Enter to proceed, Ctrl+C to cancel): ");
+		log_info("PRAGMA_LOCAL_BASE detected: %s", local_base);
+		log_info("This option will generate a site with URLs that are probably not suitable for production.");
+		log_info("Continue? (Press Enter to proceed, Ctrl+C to cancel): ");
 		fflush(stdout);
 
 		// Wait for user confirmation
@@ -368,10 +368,10 @@ site_info* load_site_yaml(char* path) {
 			// User pressed Enter (or typed something), continue
 			free(config->base_url);
 			config->base_url = wchar_convert(local_base);
-			printf("=> Using local base URL: %s\n", local_base);
+			log_info("Using local base URL: %s", local_base);
 		} else {
 			// Input error or EOF, abort
-			printf("=> Aborting pragma-web.\n");
+			log_info("Aborting pragma-web.");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -409,7 +409,7 @@ pp_page* load_site( int operation, char* directory, time_t since_time ) {
 
 	// malloc() has failed.
 	if (!source_directory) {
-		perror("=> fatal error: can't allocate memory while loading site: ");
+		log_fatal("can't allocate memory while loading site");
 		return NULL;
 	}
 
@@ -430,7 +430,7 @@ pp_page* load_site( int operation, char* directory, time_t since_time ) {
 			if (strstr(ent->d_name, ".txt") != NULL && ent->d_name[0] != '.') {
 			utf8_path filename = malloc(strlen(source_directory) + strlen(ent->d_name) + 1);
 			if (!filename) {
-				printf("! Error: malloc failed for filename in load_site()\n");
+				log_error("malloc failed for filename in load_site()");
 				continue;
 			}
 			strcpy(filename, source_directory);
@@ -459,12 +459,12 @@ pp_page* load_site( int operation, char* directory, time_t since_time ) {
 						tail->next = parsed_data;
 					tail = parsed_data;
 				} else
-					printf("parse_file() returned null while trying to read %s!", ent->d_name);
+					log_error("parse_file() returned null while trying to read %s!", ent->d_name);
 			} else continue;
 		}
 		closedir(dir);
 	} else {
-		perror("Can't open the source directory! Check to see that it's readable.");
+		log_error("Can't open the source directory! Check to see that it's readable.");
 		return NULL;
 	} 
 	return head;
@@ -490,7 +490,7 @@ void write_single_page(pp_page* page, char *path, wchar_t* html_content) {
 	// Use the source filename instead of date_stamp for HTML output
 	wchar_t *filename = page->source_filename;
 	if (!filename || wcslen(filename) == 0) {
-		printf("Error: page has no source filename\n");
+		log_error("page has no source filename");
 		return;
 	}
 
@@ -498,14 +498,14 @@ void write_single_page(pp_page* page, char *path, wchar_t* html_content) {
 	size_t full_path_len = strlen(path) + wcslen(filename) + 10; // ".html" + null + buffer
 	char *full_path = malloc(full_path_len);
 	if (!full_path) {
-		printf("Error: could not allocate memory for page path\n");
+		log_error("could not allocate memory for page path");
 		return;
 	}
 
 	// Convert filename to char* for path construction
 	char *filename_char = char_convert(filename);
 	if (!filename_char) {
-		printf("Error: could not convert filename to char\n");
+		log_error("could not convert filename to char");
 		free(full_path);
 		return;
 	}
@@ -544,7 +544,7 @@ void load_site_icons(char *root, char *subdir, site_info *config) {
 	int c;	
    	directory_to_array(path, &config->icons, &c);
 	free(path);
-	printf("=> Loaded %d icons.\n", c);
+	log_info("Loaded %d icons.", c);
 
 	// Save the sentinel value for the icon linked list
 	config->icon_sentinel = c;
@@ -567,7 +567,7 @@ bool update_source_file_with_static_icon(char *source_path, const wchar_t *icon_
 	// Read the current file content
 	wchar_t *content = read_file_contents(source_path);
 	if (!content) {
-		printf("! Error: could not read source file '%s' to add static_icon\n", source_path);
+		log_error("could not read source file '%s' to add static_icon", source_path);
 		return false;
 	}
 
@@ -584,7 +584,7 @@ bool update_source_file_with_static_icon(char *source_path, const wchar_t *icon_
 	}
 	if (!separator) {
 		free(content);
-		printf("! Error: could not find --- or ### separator in source file '%s'\n", source_path);
+		log_error("could not find --- or ### separator in source file '%s'", source_path);
 		return false;
 	}
 
@@ -618,11 +618,11 @@ bool update_source_file_with_static_icon(char *source_path, const wchar_t *icon_
 	free(new_content);
 
 	if (result != 0) {
-		printf("! Error: could not write updated content to source file '%s'\n", source_path);
+		log_error("could not write updated content to source file '%s'", source_path);
 		return false;
 	}
 
-	printf("-> Added static_icon:%ls to %s\n", icon_name, source_path);
+	log_info("Added static_icon:%ls to %s", icon_name, source_path);
 	return true;
 }
 
@@ -643,7 +643,7 @@ void assign_icons(pp_page *pages, site_info *config, const char *source_dir) {
 	
 	// Need to bail if we don't have the required arguments, of course:
 	if (!pages || !config) {
-		printf("! error: null %s in assign_icons()\n", pages ? "configuration" : 
+		log_error("null %s in assign_icons()", pages ? "configuration" :
 			(config ? "page list" : " and page list"));  
 		return;
 	}
@@ -673,7 +673,7 @@ void assign_icons(pp_page *pages, site_info *config, const char *source_dir) {
 				wcscpy(current->icon, current->static_icon);
 				used_static_icon = true;
 			} else {
-				printf("! Warning: static_icon '%s' not found or unreadable for post '%ls', using random icon\n", 
+				log_warn("static_icon '%s' not found or unreadable for post '%ls', using random icon",
 					   static_icon_path, current->title);
 			}
 			
@@ -732,7 +732,7 @@ void directory_to_array(const utf8_path path, char ***filenames, int *count) {
 	// Basics: can we open it?
 	DIR *dir = utf8_opendir(path);
 	if (!dir) {
-		perror("Error opening dir in directory_to_array() ");
+		log_error("Error opening dir in directory_to_array()");
 		return;
 	}
 

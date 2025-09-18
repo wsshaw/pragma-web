@@ -16,7 +16,7 @@ int write_file_contents(const utf8_path path, const wchar_t *content) {
 	FILE *file = utf8_fopen(path, "w");
 
 	if (file == NULL) {
-		perror("! Unable to open file for writing in write_file_contents()!");
+		log_error("Unable to open file for writing in write_file_contents()!");
 		return -1; // If we aren't able to open the file, bail and return an error
 	}
 
@@ -31,8 +31,8 @@ int write_file_contents(const utf8_path path, const wchar_t *content) {
 	char *utf8_content = char_convert(content);
 	if (!utf8_content) {
 		fclose(file);
-		printf("! Unable to convert content to UTF-8 in write_file_contents() for path: %s\n", path);
-		perror("char_convert failed");
+		log_error("Unable to convert content to UTF-8 in write_file_contents() for path: %s", path);
+		log_error("char_convert failed");
 		return -1;
 	}
 
@@ -43,7 +43,7 @@ int write_file_contents(const utf8_path path, const wchar_t *content) {
 	fclose(file);
 
 	if (written < 0) { // <= -1 bytes written...aka something went wrong
-		perror("! Unable to write to file in write_file_contents()!");
+		log_error("Unable to write to file in write_file_contents()!");
 		return -1;
 	}
    	return 0; // Return 0 for success
@@ -65,7 +65,7 @@ wchar_t* read_file_contents(const utf8_path path) {
 	FILE *file = utf8_fopen(path, "r");
 
 	if (!file) {
-		perror("Error opening file");
+		log_error("Error opening file");
 		return NULL;
 	}
 
@@ -80,7 +80,7 @@ wchar_t* read_file_contents(const utf8_path path) {
 			contentSize += 10;
 			wchar_t *temp = realloc(content, contentSize * sizeof(wchar_t));
 			if (!temp) {
-				perror("realloc()");
+				log_error("realloc()");
 				free(content);
 				fclose(file);
 				return NULL;
@@ -95,7 +95,7 @@ wchar_t* read_file_contents(const utf8_path path) {
 	} else {
 		wchar_t *temp = realloc(content, (contentSize + 1) * sizeof(wchar_t));
 		if (!temp) {
-			perror("realloc()");
+			log_error("realloc()");
 			free(content);
 			fclose(file);
 			return NULL;
@@ -415,7 +415,7 @@ void cleanup_stale_files(const char *source_dir, const char *output_dir) {
 
     DIR *dir = opendir(posts_dir);
     if (!dir) {
-        printf("=> Could not open posts directory %s for stale file cleanup\n", posts_dir);
+        log_error("Could not open posts directory %s for stale file cleanup", posts_dir);
         return;
     }
 
@@ -451,17 +451,17 @@ void cleanup_stale_files(const char *source_dir, const char *output_dir) {
 
     // If no stale files found, report and return
     if (stale_count == 0) {
-        printf("=> No stale pragma-generated files found\n");
+        log_info("No stale pragma-generated files found");
         return;
     }
 
     // Show stale files and ask for confirmation
-    printf("=> Found %d stale pragma-generated file%s:\n", stale_count, stale_count == 1 ? "" : "s");
+    log_info("Found %d stale pragma-generated file%s:", stale_count, stale_count == 1 ? "" : "s");
     for (int i = 0; i < stale_count; i++) {
-        printf("  - c/%s (no corresponding dat/ source file)\n", stale_files[i]);
+        log_info("  - c/%s (no corresponding dat/ source file)", stale_files[i]);
     }
 
-    printf("\nDelete these stale files? [y/N]: ");
+    log_info("\nDelete these stale files? [y/N]: ");
     fflush(stdout);
 
     char response[10];
@@ -474,17 +474,17 @@ void cleanup_stale_files(const char *source_dir, const char *output_dir) {
                 snprintf(file_path, sizeof(file_path), "%s/%s", posts_dir, stale_files[i]);
 
                 if (remove(file_path) == 0) {
-                    printf("  ✓ Deleted %s\n", stale_files[i]);
+                    log_info("  ✓ Deleted %s", stale_files[i]);
                     deleted++;
                 } else {
-                    printf("  ✗ Failed to delete %s\n", stale_files[i]);
+                    log_error("  ✗ Failed to delete %s", stale_files[i]);
                 }
             }
-            printf("=> Deleted %d of %d stale files\n", deleted, stale_count);
+            log_info("Deleted %d of %d stale files", deleted, stale_count);
         } else {
-            printf("=> Stale file cleanup cancelled\n");
+            log_info("Stale file cleanup cancelled");
         }
     } else {
-        printf("=> Stale file cleanup cancelled\n");
+        log_info("Stale file cleanup cancelled");
     }
 }

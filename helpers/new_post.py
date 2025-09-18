@@ -41,8 +41,6 @@ def load_dictionary_words():
             except:
                 continue
 
-    # Fallback word list if no system dictionary found (ICAO phonetic).
-    # ..i mean, C(26,3)= 26!/3!(23)! = plenty, but not many distinctive/memorable names
     if not words:
         words = [
             "alfa", "bravo", "charlie", "delta", "echo", "foxtrot",

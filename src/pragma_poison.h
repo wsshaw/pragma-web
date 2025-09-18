@@ -404,5 +404,32 @@ typedef struct {
     bool clean_stale;   // whether we want to delete orphaned html files, i.e. files that are pragma generated but have no corresponding data source in this site
 } pragma_options;
 
-// Stale file cleanup function 
+// Logging system
+typedef enum {
+    LOG_DEBUG = 0,    // Detailed debug info (only when debugging)
+    LOG_INFO = 1,     // General information (=> messages)
+    LOG_WARN = 2,     // Warnings (! messages, recoverable issues)
+    LOG_ERROR = 3,    // Errors (! Error: messages, serious issues)
+    LOG_FATAL = 4     // Fatal errors (cause program termination)
+} log_level_t;
+
+// Initialize logger (call once at program start)
+void log_init(log_level_t min_level, bool quiet_mode);
+
+// Main logging functions
+void log_debug(const char *format, ...);
+void log_info(const char *format, ...);
+void log_warn(const char *format, ...);
+void log_error(const char *format, ...);
+void log_fatal(const char *format, ...);
+
+// Wide character versions for existing wprintf usage
+void log_info_w(const wchar_t *format, ...);
+void log_warn_w(const wchar_t *format, ...);
+void log_error_w(const wchar_t *format, ...);
+
+// System error logging (replaces perror)
+void log_system_error(const char *context);
+
+// Stale file cleanup function
 void cleanup_stale_files(const char *source_dir, const char *output_dir);

@@ -16,8 +16,8 @@
  */
 void append(wchar_t *string, wchar_t *result, size_t *j) {
 	if (string == NULL || result == NULL) {
-		printf("! Invalid arguments in append(): string argument is%s null; result is%s null\n",
-			!string ? "" : " not", !result ? "" : " not" );
+		log_error("Invalid arguments in append(): string argument is%s null; result is%s null",
+			!string ? "" : " not", !result ? "" : " not");
 			return;
 	}
 
@@ -25,7 +25,7 @@ void append(wchar_t *string, wchar_t *result, size_t *j) {
 	size_t length = wcslen(string);
 
 	if (start + length < start || start + length >= SIZE_MAX) {
-		printf("! buffer overflow in append()\n");
+		log_error("buffer overflow in append()");
 			return;
 	}
 
@@ -52,7 +52,7 @@ void append(wchar_t *string, wchar_t *result, size_t *j) {
 char* char_convert(const wchar_t* w) {
 	size_t len = wcstombs(NULL, w, 0);
 	if (len == (size_t)-1) {
-		perror("! Error: invalid wide character sequence in char_convert()");
+		log_error("invalid wide character sequence in char_convert()");
 		return NULL;
 	}
 
@@ -61,13 +61,13 @@ char* char_convert(const wchar_t* w) {
 	if (out_str != NULL) {
 		size_t result = wcstombs(out_str, w, len + 1);
 		if (result == (size_t)-1) {
-			perror("! Error: conversion failed in char_convert()");
+			log_error("conversion failed in char_convert()");
 			free(out_str);
 			return NULL;
 		}
 		return out_str;
 	} else {
-		printf("! Error: malloc() failed while converting string types in char_convert()!\n");
+		log_error("malloc() failed while converting string types in char_convert()!");
 		return NULL;
 	}
 }
@@ -88,19 +88,19 @@ wchar_t* wchar_convert(const char* c) {
 	size_t len = mbstowcs(NULL, c, 0);
 
 	if (len < 0) {
-		perror("Can't convert character string to wide characters (wchar_convert()): ");
+		log_error("Can't convert character string to wide characters (wchar_convert())");
 		return NULL;
 	}
 
 	wchar_t* w = malloc((len + 1) * sizeof(wchar_t));
 
 	if (w == NULL) {
-		perror("malloc() failure in wchar_convert!");
+		log_error("malloc() failure in wchar_convert!");
 		return NULL;
 	}
 
 	if (mbstowcs(w, c, len + 1) < 0 ) {
-        	perror("Error converting character to wide char: ");
+        	log_error("Error converting character to wide char");
 		free(w);
         	return NULL;
 	}
@@ -135,7 +135,7 @@ wchar_t* replace_substring(wchar_t *str, const wchar_t *find, const wchar_t *rep
 	wchar_t *new_str = (wchar_t *)malloc((new_string_length + 1) * sizeof(wchar_t));
 
 	if (!new_str) {
-		printf("! Error: malloc failed in replace_substring\n");
+		log_error("malloc failed in replace_substring");
 		return NULL;
 	}
 
@@ -237,7 +237,7 @@ wchar_t* wrap_with_element(wchar_t* text, wchar_t* start, wchar_t* close) {
 	wchar_t *output = malloc(( wcslen(text) + wcslen(start) + wcslen(close) + 1 ) * sizeof(wchar_t));
 
 	if (!output) {
-		perror("! malloc() in wrap_with_element:");
+		log_error("malloc() in wrap_with_element");
 		return NULL;
 	}
 
