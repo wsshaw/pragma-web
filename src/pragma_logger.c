@@ -2,8 +2,11 @@
  * pragma_logger.c - Centralized logging functions for pragma-web
  *
  * Provides consistent logging functionality across the entire codebase.
- * Replaced 
- * replacing the ad hoc printf/wprintf/perror usage with a unified system.
+ * Replaced the ad hoc printf/wprintf/perror usage with a unified system.
+ * 
+ * (I know there's repetition of basic logic in the functions here, but it's
+ * a caclaulted tradeoff for legibility and easier, less error-prone calls 
+ * to the logging functions.)
  *
  * Features:
  * - Configurable log levels

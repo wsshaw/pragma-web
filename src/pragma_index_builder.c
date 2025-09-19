@@ -24,12 +24,12 @@
 */
 wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	if (!site) {
-		printf("got null site_info in build_index()! Cannot build without site info -- aborting.");
+		log_fatal("got null site_info in build_index()! Cannot build without site info -- aborting.");
 		// todo: abort gracefully instead of just offering nullity
 		return NULL;
 	}
 	if (!pages || start_page < 0) {
-		printf("null pages or start page < 0");
+		log_fatal("null pages or start page < 0, aborting!");
 		return NULL;
 	}
 
@@ -42,8 +42,10 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	
 
 	if (!index_output) {
-		wprintf(L"! Error allocating memory for building index page (start_page %d)!", start_page);
-		perror("malloc(): ");
+		// hmm, this seems like a pretty 'fatal' error
+		//wprintf(L"! Error allocating memory for building index page (start_page %d)!", start_page);
+		//perror("malloc(): ");
+		log_fatal("Error allocating memory for building index page %d. Aborting!", start_page);
 		return NULL;
 	}
 
@@ -65,7 +67,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 
 		// Validate timestamp is reasonable (between 1970 and 2100)
 		if (current->date_stamp < 0 || current->date_stamp > 4102444800L) {
-			printf("! Warning: invalid timestamp %ld, using 0\n", current->date_stamp);
+			log_warn("Warning: invalid timestamp %ld, using 0\n", current->date_stamp);
 			current->date_stamp = 0;
 		}
 
@@ -74,7 +76,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 			wcscat(index_output, rendered_item);
 			free(rendered_item);
 		} else {
-			printf("! Warning: template rendering failed for post, skipping\n");
+			log_warn("Warning: template rendering failed for post, skipping\n");
 		}
 
 		pages_processed++;
@@ -91,9 +93,10 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 				wcscat(index_output, L".html\">&lt; newer </a>");
 			}
 			if (current->next == NULL) // if nothing's left, make a note of it
-				wcscat(index_output, L"(these are the oldest things)\n");
+				wcscat(index_output, L"(these are the oldest things)\n"); // FIXME: -> site config
 			else {
-				// basic logic: there must be older content if pages remain in the list
+				// basic logic: there must be older content if any pages remain in the list because
+				// it's sorted by date, descending.
 				if (start_page > 0)
 					wcscat(index_output, L" | ");
 				wcscat(index_output, L"<a href=\"index");
@@ -116,7 +119,7 @@ wchar_t* build_index( pp_page* pages, site_info* site, int start_page ) {
 	size_t current_len = wcslen(index_output);
 	size_t footer_len = wcslen(site->footer);
 	if (current_len + footer_len >= buffer_size) {
-		printf("! BUFFER OVERFLOW WARNING: current %zu + footer %zu >= buffer %zu\n", 
+		log_warn("buffer overflow warning! (current %zu + footer %zu >= buffer %zu)\n", 
 		       current_len, footer_len, buffer_size);
 	}
 	

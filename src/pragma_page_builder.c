@@ -21,13 +21,15 @@
  */
 wchar_t* build_single_page(pp_page* page, site_info* site) {
 	if (!page || !site) {
-		if (PRAGMA_DEBUG) printf("=> error: no page/site in build_single_page, page = %s, site = %s\n", !page?"no":"yes", !site?"no":"yes");
+		if (PRAGMA_DEBUG) {
+			debug_log("=> error: no page/site in build_single_page, page = %s, site = %s\n", !page?"no":"yes", !site?"no":"yes");
+		}
 		return NULL;
 	}
 	// figure out where this page lives in the world
 	wchar_t *page_url = malloc(512 * sizeof(wchar_t));
 	if (!page_url) {
-		printf("Error: could not allocate memory for page URL\n");
+		error_log("Error: could not allocate memroy for page URL in build_single_page().");
 		return NULL;
 	}
 
@@ -66,8 +68,7 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	}
 
 	if (!page_output) {
-		wprintf(L"! Unable to allocate memory for assembling page `%ls'!\n", page->title);
-		perror("malloc(): ");
+		log_error_w(L"! Unable to allocate memory for assembling page `%ls'!\n", page->title);
 		return NULL;
 	}
 
@@ -101,7 +102,7 @@ wchar_t* build_single_page(pp_page* page, site_info* site) {
 	// Use template system to render the complete page
 	page_output = render_page_with_template(page, site);
 	if (!page_output) {
-		wprintf(L"Error: template rendering failed for page '%ls'\n", page->title);
+		log_error_w(L"Error: template rendering failed for page '%ls'\n", page->title);
 		return NULL;
 	} 
 

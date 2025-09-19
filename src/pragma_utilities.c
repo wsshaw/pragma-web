@@ -93,16 +93,6 @@ wchar_t* build_url(const wchar_t *base_url, const wchar_t *path) {
 	return url;
 }
 
-
-
-
-
-
-
-
-
-
-
 /**
  * legible_date(): Convert an epoch timestamp to a formatted wide-character date string.
  *

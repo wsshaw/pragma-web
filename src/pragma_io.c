@@ -386,6 +386,7 @@ site_info* load_site_yaml(char* path) {
  * 
  * There are a number of things I need to update here: mostly committing to wchar and 
  * handling errors in a consistent and actionable way (use a stable log output format).
+ *   (2025-09-18: logging system, check! On to the next one.)
  * 
  * 	arguments:
  * 	 int operation (loading mode: LOAD_EVERYTHING, LOAD_UPDATED_ONLY, etc.)

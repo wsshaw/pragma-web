@@ -82,8 +82,14 @@ void md_header(wchar_t *line, safe_buffer *output) {
  *  void
  */
 void md_paragraph(wchar_t *line, safe_buffer *output) {
-	if (output == NULL) { printf("Output is null \n"); }
-	if (line == NULL) { printf("Line is null \n"); }
+	if (PRAGMA_DEBUG) {
+		if (output == NULL) { 
+				log_debug("Output is null \n"); 
+		}
+		if (line == NULL) { 
+				log_debug("Line is null \n"); 
+		}
+	}
 
 	wchar_t *paragraph = html_paragraph(line, NULL, false);
 	if (paragraph) {
@@ -198,15 +204,16 @@ void md_horizontal_rule(safe_buffer *output) {
 void md_escape(const wchar_t *original, wchar_t *output, size_t output_size) {
 	if (original == NULL || output == NULL || output_size == 0) {
 		// need to add error handling for null pointers or invalid output size.
-		wprintf(L"Invalid input or output parameters.\n");
-			return;
+		// also don't lump all those conditions together
+		log_warn("Invalid input or output parameters in md_escape()");
+		return;
 	}
 
 	size_t original_length = wcslen(original);
 	output_size = output_size > original_length ? original_length * 2 : output_size - 1;
 
 	if (output_size <= original_length) {
-		wprintf(L"! insufficient output buffer in md_escape()! will not escape markdown\n");
+		log_error("insufficient output buffer in md_escape()! will not escape markdown.\n");
 		return;
 	}
 

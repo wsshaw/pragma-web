@@ -93,7 +93,7 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	// Initialize buffer for HTML output
 	safe_buffer *output_buf = buffer_pool_get_global();
 	if (!output_buf) {
-		printf("Error: failed to get buffer for scroll output\n");
+		log_error("Error: failed to get buffer for scroll output\n");
 		return NULL;
 	}
 
@@ -177,17 +177,16 @@ wchar_t* build_scroll(pp_page* pages, site_info* site) {
 	buffer_pool_return_global(output_buf);
 
 	if (!scroll_output) {
-		printf("Error: failed to convert buffer to string\n");
+		log_error("Error: failed to convert buffer to string in build_scroll()\n"); 
 		return NULL;
 	}
 
-	// Build scroll page URL
+	// Build scroll page URL, description 
 	wchar_t *scroll_url = build_url(site->base_url, L"s/");
-
-	// Apply common token replacements
-	// Use "all posts" as page title - the template will combine it with site name
 	wchar_t scroll_description[256];
 	swprintf(scroll_description, 256, L"Chronological index of all posts on %ls", site->site_name);
+	
+	// Use "all posts" as page title - the template will combine it with site name
 	wchar_t *final_output = apply_common_tokens(scroll_output, site, scroll_url, L"all posts", scroll_description, NULL);
 
 	free(scroll_url);

@@ -118,7 +118,7 @@ wchar_t* build_rss(pp_page* pages, site_info* site) {
     wcscat(rss_output, L"</rss>\n");
 
     if (PRAGMA_DEBUG) {
-        printf("Generated RSS feed with %d items\n", item_count);
+        log_info("Generated RSS feed with %d items\n", item_count);
     }
 
     return rss_output;

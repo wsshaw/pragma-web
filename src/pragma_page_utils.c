@@ -47,7 +47,7 @@ void parse_site_markdown(pp_page* page_list) {
 
 		// ...perhaps failing...
 		if (new_content == NULL) {
-			printf("! warning: couldn't reallocate memory for page content in parse_site()!\n");
+			log_warn("! warning: couldn't reallocate memory for page content in parse_site()!\n");
 			free(markdown_out);
 			continue;
 		}
