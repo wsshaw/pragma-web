@@ -227,10 +227,11 @@ void free_page(pp_page *page) {
 	free(page->date);
 	free(page->content);
 	free(page->summary);
+	free(page->author);
+	free(page->featured_image);
 	free(page->icon);
 	free(page->source_filename);
-	// Temporarily comment out to test if this is causing the double-free
-	// free(page->static_icon);
+	free(page->static_icon);
 	free(page);
 }
 
@@ -307,11 +308,13 @@ void free_page_list(pp_page *head) {
  *  const wchar_t *page_title (title for meta tags; may be NULL for site name)
  *  const wchar_t *page_description (description for meta tags; may be NULL for empty)
  *  const wchar_t *page_icon (icon for this page; may be NULL to use default image)
+ *  const wchar_t *page_author (author for meta tags; may be NULL for empty)
+ *  const wchar_t *page_featured_image (featured image for og:image; may be NULL to use icon/default)
  *
  * returns:
  *  wchar_t* (processed HTML with tokens replaced; caller must free)
  */
-wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title, const wchar_t *page_description, const wchar_t *page_icon) {
+wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title, const wchar_t *page_description, const wchar_t *page_icon, const wchar_t *page_author, const wchar_t *page_featured_image) {
 	if (!output || !site)
 		return output;
 
@@ -340,9 +343,18 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 		result = temp;
 	}
 	// Note: {TAGS} and {DATE} are handled by individual page builders
-	// Build full URL for page image (icon or default)
+	// Build full URL for page image (featured_image takes priority, then icon, then default)
 	wchar_t *full_image_url;
-	if (page_icon && wcslen(page_icon) > 0) {
+	if (page_featured_image && wcslen(page_featured_image) > 0) {
+		// Use featured image - build full URL
+		if (wcsstr(page_featured_image, L"://")) {
+			// Already a full URL
+			full_image_url = wcsdup(page_featured_image);
+		} else {
+			// Make it a full URL using utility function
+			full_image_url = build_url(site->base_url, page_featured_image);
+		}
+	} else if (page_icon && wcslen(page_icon) > 0) {
 		// Use page icon - build full URL
 		wchar_t *icon_path = malloc((wcslen(L"img/icons/") + wcslen(page_icon) + 1) * sizeof(wchar_t));
 		if (icon_path) {
@@ -404,6 +416,14 @@ wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *pa
 	// Add description replacement
 	const wchar_t *description = page_description ? page_description : L"";
 	temp = template_replace_token(result, L"DESCRIPTION", description);
+	if (temp) {
+		free(result);
+		result = temp;
+	}
+
+	// Add author replacement
+	const wchar_t *author = page_author ? page_author : L"";
+	temp = template_replace_token(result, L"AUTHOR", author);
 	if (temp) {
 		free(result);
 		result = temp;

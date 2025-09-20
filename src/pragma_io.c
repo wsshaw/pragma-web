@@ -36,6 +36,8 @@ pp_page* parse_file(const utf8_path filename) {
 	// Allocate memory for the components of the internal representation of the page.
 	// (The allocations are checked for success below)
 	page->title = malloc(1024);
+	page->author = malloc(256);
+	page->featured_image = malloc(512);
 	page->tags = malloc(1024);
 	page->date = malloc(256);
 	page->content = malloc(32768);
@@ -67,16 +69,32 @@ pp_page* parse_file(const utf8_path filename) {
 		}
 	}
 	
-	// Initialize static_icon and summary to empty strings (with NULL checks)
+	// Initialize static_icon, summary, author, and featured_image to empty strings (with NULL checks)
 	if (page->static_icon) {
 		wcscpy(page->static_icon, L"");
 	}
 	if (page->summary) {
 		wcscpy(page->summary, L"");
 	}
+	if (page->author) {
+		wcscpy(page->author, L"");
+	}
+	if (page->featured_image) {
+		wcscpy(page->featured_image, L"");
+	}
 
 	// Again, 32K of content is a realistic value, but there are smarter ways to do this
 	size_t content_size = 32768;
+
+	// Check all allocations for success
+	if (page->title == NULL || page->author == NULL || page->featured_image == NULL ||
+	    page->tags == NULL || page->date == NULL || page->content == NULL ||
+	    page->summary == NULL || page->icon == NULL || page->static_icon == NULL ||
+	    page->source_filename == NULL) {
+		log_error("Can't allocate memory for page fields while trying to read %s!", filename);
+		free_page(page);
+		return NULL;
+	}
 
 	FILE* file = utf8_fopen(filename, "r");
 	if (file == NULL) {
@@ -95,14 +113,6 @@ pp_page* parse_file(const utf8_path filename) {
 	// tested with other systems. 
 	page->last_modified = file_meta.st_mtime;
 
-	if (page->content == NULL) {
-		log_error("Can't allocate memory for page content while trying to read %s!", filename);
-		// clean things up if we run into trouble here
-		free_page(page);
-		fclose(file);
-		return NULL;
-	}
-
 	// BLOCK: yaml "parser"
 
 	// Read the file into wide-character strings until we hit the standard delimiter that 
@@ -116,6 +126,26 @@ pp_page* parse_file(const utf8_path filename) {
 		else if (wcsstr(line, L"tags:") != NULL) {
 			wcscpy(page->tags, line + wcslen(L"tags:"));
 			strip_terminal_newline(page->tags, NULL);	
+		}
+		else if (wcsstr(line, L"author:") != NULL) {
+			wcscpy(page->author, line + wcslen(L"author:"));
+			strip_terminal_newline(page->author, NULL);
+			// Remove leading whitespace
+			wchar_t *src = page->author;
+			while (*src == L' ' || *src == L'\t') src++;
+			if (src != page->author) {
+				wmemmove(page->author, src, wcslen(src) + 1);
+			}
+		}
+		else if (wcsstr(line, L"featured_image:") != NULL) {
+			wcscpy(page->featured_image, line + wcslen(L"featured_image:"));
+			strip_terminal_newline(page->featured_image, NULL);
+			// Remove leading whitespace
+			wchar_t *src = page->featured_image;
+			while (*src == L' ' || *src == L'\t') src++;
+			if (src != page->featured_image) {
+				wmemmove(page->featured_image, src, wcslen(src) + 1);
+			}
 		}
 		else if (wcsstr(line, L"summary:") != NULL) {
 			wcscpy(page->summary, line + wcslen(L"summary:"));

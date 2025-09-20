@@ -79,6 +79,7 @@ L"<meta name=\"generator\" content=\"pragma-web\">"\
 L"<meta property=\"og:title\" content=\"{TITLE_FOR_META}\">"\
 L"<meta property=\"og:description\" content=\"{DESCRIPTION}\">"\
 L"<meta property=\"og:type\" content=\"article\">"\
+L"<meta property=\"article:author\" content=\"{AUTHOR}\">"\
 L"<meta property=\"og:locale\" content=\"en\">"\
 L"<meta property=\"og:image\" content=\"{MAIN_IMAGE}\">"\
 L"<meta property=\"og:site_name\" content=\"{SITE_NAME}\">"\
@@ -106,7 +107,7 @@ L"{TAGS}"
 
 #define DEFAULT_FOOTER	L"</div></body><script src=\"https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js\"></script><link href=\"https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css\" rel=\"stylesheet\"><script>const lightbox = GLightbox();</script></html>"
 
-#define DEFAULT_SAMPLE_POST L"Welcome to pragma-web!\n"\
+#define DEFAULT_SAMPLE_POST L"title:Welcome to pragma-web!\n"\
 L"tags:welcome,sample\n"\
 L"date:2024-01-01 12:00:00\n"\
 L"icon:default.svg\n"\
@@ -116,7 +117,7 @@ L"You can add more posts by creating `.txt` files with the same format:\n"\
 L"- Title on first line\n"\
 L"- Metadata (tags, date, icon) on following lines\n"\
 L"- `---` separator\n"\
-L"- Content in markdown format\n\n"\
+L"- Content in markdown or HTML format\n\n"\
 L"#MORE\n\n"\
 L"Additional content after the #MORE tag appears only on individual post pages.\n"
 
@@ -216,6 +217,8 @@ typedef struct pp_page {
 	wchar_t *tags;
 	wchar_t *date;
 	wchar_t *content;
+    wchar_t *author;
+    wchar_t *featured_image;
 	wchar_t *summary;
 	time_t last_modified;
 	time_t date_stamp;
@@ -278,7 +281,7 @@ bool page_is_tagged(pp_page* p, wchar_t *t);
 void swap(tag_dict *a, tag_dict *b);
 void sort_tag_list(tag_dict *head);
 bool split_before(wchar_t *delim, const wchar_t *input, wchar_t *output);
-wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title, const wchar_t *page_description, const wchar_t *page_icon);
+wchar_t* apply_common_tokens(wchar_t *output, site_info *site, const wchar_t *page_url, const wchar_t *page_title, const wchar_t *page_description, const wchar_t *page_icon, const wchar_t *page_author, const wchar_t *page_featured_image);
 
 // HTML element generation functions
 wchar_t* html_escape(const wchar_t *text);
@@ -318,6 +321,8 @@ typedef struct {
     wchar_t *prev_title;
     wchar_t *next_title;
     wchar_t *description;
+    wchar_t *author;
+    wchar_t *featured_image;
 
     // Tag arrays
     wchar_t **tags;
@@ -401,7 +406,9 @@ typedef struct {
     bool new_only;
     bool dry_run;
     bool show_help;
-    bool clean_stale;   // whether we want to delete orphaned html files, i.e. files that are pragma generated but have no corresponding data source in this site
+    bool clean_stale;   
+    // clean_stale = whether we want to delete orphaned html files, i.e. old
+    // pragma-generated files that have no corresponding data source in this site
 } pragma_options;
 
 // Logging system

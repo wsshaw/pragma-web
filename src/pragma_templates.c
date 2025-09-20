@@ -33,6 +33,8 @@ void template_free(template_data *data) {
     free(data->date);
     free(data->icon);
     free(data->content);
+    free(data->author);
+    free(data->featured_image);
     free(data->prev_url);
     free(data->next_url);
     free(data->prev_title);
@@ -83,6 +85,8 @@ template_data* template_data_from_page(pp_page *page, site_info *site) {
     data->title = page->title ? wcsdup(page->title) : NULL;
     data->icon = page->icon ? wcsdup(page->icon) : NULL;
     data->content = page->content ? wcsdup(page->content) : NULL;
+    data->author = page->author ? wcsdup(page->author) : NULL;
+    data->featured_image = page->featured_image ? wcsdup(page->featured_image) : NULL;
 
     // Format date
     if (page->date_stamp > 0) {
@@ -501,12 +505,14 @@ wchar_t* apply_template(const char *template_path, template_data *data) {
 
     const wchar_t *tokens[] = {
         L"TITLE", L"DATE", L"ICON", L"CONTENT", L"POST_URL",
-        L"PREV_URL", L"NEXT_URL", L"PREV_TITLE", L"NEXT_TITLE", L"DESCRIPTION", NULL
+        L"PREV_URL", L"NEXT_URL", L"PREV_TITLE", L"NEXT_TITLE", 
+        L"DESCRIPTION", L"AUTHOR", NULL
     };
 
     const wchar_t *values[] = {
         data->title, data->date, data->icon, data->content, data->post_url,
-        data->prev_url, data->next_url, data->prev_title, data->next_title, data->description
+        data->prev_url, data->next_url, data->prev_title, data->next_title, 
+        data->description, data->author
     };
 
     for (int i = 0; tokens[i]; i++) {

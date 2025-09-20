@@ -114,6 +114,8 @@ fn = get_user_filename(suggested_filename)
 output = """title:
 tags:
 summary:
+author:
+featured_image:
 static_icon:
 parse:false
 date:""" + str(now) + """
@@ -122,11 +124,6 @@ Your content here (Markdown and/or HTML can mix freely, see README)"""
 
 print(output, file=open(fn, 'w'))
 
-# Create image directory based on the chosen filename (without .txt extension)
-base_name = fn[:-4] if fn.endswith('.txt') else fn
-image_dir = "../img/" + base_name
-print("Created " + fn + ".")
-
 # Create a directory for images associated with this post, use the 'open' command to display that
 # directory in the Finder, and open the new template file in an editor. Portability should improve.
 #
@@ -134,6 +131,11 @@ print("Created " + fn + ".")
 # can be changed to, e.g., TextEdit, VS Code, or even emacs. The helper will also open the image 
 # directory associated with this post in the macOS Finder; change or comment out this command if 
 # you are on a different platform or don't want this behavior. 
+
+base_name = fn[:-4] if fn.endswith('.txt') else fn
+image_dir = "../img/" + base_name
+print("Created " + fn + ".")
+
 subprocess.run(["mkdir", image_dir]);
 subprocess.run(["open", image_dir]);
 subprocess.run(["vim", fn]);
